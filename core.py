@@ -13,18 +13,48 @@ class State:
     pos: tuple[int]
     val: Values
 
+@dataclass(frozen=True)
+class StateView:
+    state: State
+    progs: list["Prog"]
+
+    def prog_idx(self, name) -> int:
+        for i, p in enumerate(self.progs):
+            if p.name == name:
+                return i
+        raise ValueError(f"Program {name} not found")
+    
+    def pos(self, name) -> int:
+        pi = self.prog_idx(name)
+        return self.state.pos[pi]
+    
+    def val(self, var: Variables) -> bool:
+        return self.state.val[var]
+        
+
+
 Label = str
 Op = Callable[[Values], tuple[Label|None, Values]]
 ValuePredicate = Callable[[Values], bool]
-Assertion = Callable[[State], bool]
 
+class Assertion:
+    def check(self, state: StateView) -> None:
+        raise NotImplementedError
 
 
 def mov(var: Variables, value: any) -> Op:
-    def impl(val: Values):
-        nv = list(val)
-        nv[var] = value
+    def impl(mem: Values):
+        val = value # to satisfy "match"
+        match val:
+            case Variables(): # A = B
+                val = mem[val]
+            case _: # A = True
+                pass
+        
+        nv = list(mem)
+        nv[var] = val
         return None, tuple(nv)
+    
     return impl
 
 def cond(pred: ValuePredicate, lbl: str) -> Op:
@@ -33,7 +63,16 @@ def cond(pred: ValuePredicate, lbl: str) -> Op:
     return impl
 
 def eq(var: Variables, value: any) -> ValuePredicate:
-    return lambda val: val[var] == value
+    def impl(mem: Values) -> bool:
+        val = value # to satisfy "match"
+        match val:
+            case Variables():
+                val = mem[value]
+        return mem[var] == value
+    return impl
+
+def const(val: bool) -> ValuePredicate:
+    return lambda _: val
 
 class Prog:
     def __init__(self, name, ops: list[Op | Label]):

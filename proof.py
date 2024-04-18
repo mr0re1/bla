@@ -1,7 +1,17 @@
-from core import Prog, Variables, Assertion, State
+from typing import Callable, Optional
+from core import  Variables, Assertion, State, StateView
 from tabulate import tabulate
+from parse import parse_program
 
-def proof(progs: list[Prog], domain: type[Variables], assertions: list[Assertion]) -> bool:
+def proof(fns: list[Callable], domain: type[Variables], assertions: list[Assertion]=None) -> bool:
+    if assertions is None:
+        assertions = []
+    progs = []
+    for fn in fns:
+        prog, asserts = parse_program(fn, domain)
+        progs.append(prog)
+        assertions += asserts
+
     state = State(
         pos=tuple([0] * len(progs)),
         val=tuple([False] * len(domain)))
@@ -9,11 +19,14 @@ def proof(progs: list[Prog], domain: type[Variables], assertions: list[Assertion
     stack, visited = [state], {state: None}
     while stack:
         state = stack.pop()
+        sv = StateView(state, progs)
 
         for a in assertions:
-            if not a(state):
-                explain(progs, domain, state, visited)
-                print(f"Assertion failed: {a}")
+            try:
+                a.check(sv)
+            except Exception as e:
+                explain(sv, domain, visited)
+                print(f"Assertion failed: {e}")
                 return False
 
         for ip, prog in enumerate(progs):
@@ -33,8 +46,9 @@ def proof(progs: list[Prog], domain: type[Variables], assertions: list[Assertion
 
 
 
-def explain(progs, domain, state, parents):
+def explain(sv: StateView, domain, parents):
     chain = []
+    progs, state = sv.progs, sv.state
     while state is not None:
         chain.append(state)
         state = parents[state]
