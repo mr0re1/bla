@@ -6,8 +6,11 @@ from dataclasses import dataclass
 @dataclass
 class _ParseCtx:
     prog_name: str
+    src: str
     domain: type[Variables]
     line_offset: int
+    ops: list[Op|Label]
+    line_mapping: list[int] # maps from state.pos to src line
 
     def check_var(self, var: str):
         assert var in self.domain.__members__, f"Unknown variable {var}"
@@ -22,6 +25,11 @@ class _ParseCtx:
     
     def lineno(self, node: ast.AST) -> int:
         return node.lineno - self.line_offset
+    
+    def add_op(self, op: Op|Label, stmt: ast.AST) -> None:
+        self.ops.append(op)
+        if not isinstance(op, Label):
+            self.line_mapping.append(self.lineno(stmt))
 
 
 def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
@@ -62,29 +70,25 @@ def parse_program(f: Callable, domain: type[Variables]):
     t = ast.parse(src)
     match t.body:
         case [ast.FunctionDef(name, args, body)]:
-            ctx = _ParseCtx(name, domain, t.body[0].lineno)
-            ops = []
-            line_mapping = []
+            ctx = _ParseCtx(
+                prog_name=name, src=src, domain=domain, line_offset=t.body[0].lineno, ops=[], line_mapping=[])
             for stmt in body:
                 op = _parse_op(stmt, ctx)
-                ops.append(op)
-                if not isinstance(op, Label):
-                    line_mapping.append(ctx.lineno(stmt))
+                ctx.add_op(op, stmt)
 
         case _:
             raise Exception("Expected a single function, got", t.body)
-    return PrettyProg(name, ops, src, line_mapping)
+    return PrettyProg(ctx)
 
 
 class PrettyProg(Prog):
-    def __init__(self, name, ops, src, line_mapping):
-        super().__init__(name, ops)
-        self.src = src
-        self.line_mapping = line_mapping
+    def __init__(self, ctx: _ParseCtx):
+        super().__init__(ctx.prog_name, ctx.ops)
+        self.ctx = ctx
     
     def render(self, pos) -> Label:
-        pos = self.line_mapping[pos] if pos < len(self.line_mapping) else None
-        lines = self.src.split("\n")
+        pos = self.ctx.line_mapping[pos] if pos < len(self.ctx.line_mapping) else None
+        lines = self.ctx.src.split("\n")
 
         res = ""
         for i, line in enumerate(lines):
