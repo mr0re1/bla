@@ -40,7 +40,7 @@ def explain(progs, domain, state, parents):
         state = parents[state]
     
     for i, state in enumerate(reversed(chain)):
-        print(f"----- step #{i}")
+        print(f"----- step #{i}:")
 
         pgs = [progs[pi].render(pos) for pi, pos in enumerate(state.pos)]
         vls = "\n".join([f"{domain(i).name}={val}" for i, val in enumerate(state.val)])

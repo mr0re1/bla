@@ -18,6 +18,8 @@ Op = Callable[[Values], tuple[Label|None, Values]]
 ValuePredicate = Callable[[Values], bool]
 Assertion = Callable[[State], bool]
 
+
+
 def mov(var: Variables, value: any) -> Op:
     def impl(val: Values):
         nv = list(val)
