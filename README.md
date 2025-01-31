@@ -4,7 +4,7 @@ Declare set of programs that share a common memory but run on differnt clocks.
 Verify that assertions always hold true, no matter the order of execution.
 
 ```py
-# example.py
+# examples/inconsistency.py
 
 from bla.core import  Variables
 from bla.proof import proof
@@ -30,7 +30,7 @@ proof([client, server], D)
 ```
 
 ```sh
-$ python3 example.py
+$ python3 examples/inconsistency.py
 ----- step #0:
  def client():            | def server():            | A_set=False
  ->  A_set = True         |     "begin" # while True | A_get=False

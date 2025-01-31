@@ -37,8 +37,8 @@ Op = Callable[[Values], tuple[Label|None, Values]]
 ValuePredicate = Callable[[Values], bool]
 
 class Assertion:
-    def check(self, state: StateView) -> None:
-        raise NotImplementedError
+    def check(self, state: StateView, cyclic: bool) -> None:
+        raise NotImplementedError()
 
 class FailedAssert(Exception):
     pass

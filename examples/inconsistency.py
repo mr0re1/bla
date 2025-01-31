@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "../bla")
+
 from bla.core import  Variables
 from bla.proof import proof
 

@@ -4,7 +4,17 @@ from bla.core import  Variables, Assertion, State, StateView, FailedAssert
 from bla.parse import parse_program
 from tabulate import tabulate
 
-def proof(fns: list[Callable], domain: type[Variables], assertions: list[Assertion]=None) -> bool:
+def _run_asserts(asserts: list[Assertion], sv: StateView, cyclic: bool) -> FailedAssert|None:
+    for a in asserts:
+        try:
+            a.check(sv, cyclic=cyclic)
+        except FailedAssert as e:
+            return e
+
+
+def proof(fns: list[Callable], 
+          domain: type[Variables], 
+          assertions: list[Assertion]=None) -> bool:
     if assertions is None:
         assertions = []
     progs = []
@@ -22,13 +32,10 @@ def proof(fns: list[Callable], domain: type[Variables], assertions: list[Asserti
         state = stack.pop()
         sv = StateView(state, progs)
 
-        for a in assertions:
-            try:
-                a.check(sv)
-            except FailedAssert as e:
-                explain(sv, domain, visited)
-                print(f"Assertion failed: {e}")
-                return False
+        if e := _run_asserts(assertions, sv, cyclic=False):
+            explain(sv, domain, visited)
+            print(f"Assertion failed: {e}")
+            return False
 
         for ip, prog in enumerate(progs):
             pos = state.pos[ip]
@@ -39,7 +46,13 @@ def proof(fns: list[Callable], domain: type[Variables], assertions: list[Asserti
                 pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip+1:]), 
                 val=nv)
             
-            if nxt in visited: continue
+            if nxt in visited: # Detected cycle
+                if e := _run_asserts(assertions, sv, cyclic=True):
+                    explain(sv, domain, visited)
+                    print(f"Assertion failed: {e}")
+                    return False
+                continue
+
             stack.append(nxt)
             visited[nxt] = state
 
