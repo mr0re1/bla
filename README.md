@@ -6,8 +6,8 @@ Verify that assertions always hold true, no matter the order of execution.
 ```py
 # example.py
 
-from core import  Variables
-from proof import proof
+from bla.core import  Variables
+from bla.proof import proof
 
 # Declare domain - the set of variables used in the program
 D = Variables("Vars", ["A_set", "A_get"])
@@ -24,7 +24,7 @@ def server():
     A_get = A_set
     if True: "begin"
 
-# Proof that assertion always holds
+# Proof that assertion holds
 proof([client, server], D)
 # Spoiler: it doesn't
 ```

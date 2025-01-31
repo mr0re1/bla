@@ -1,7 +1,8 @@
-from typing import Callable, Optional
-from core import  Variables, Assertion, State, StateView
+from typing import Callable
+
+from bla.core import  Variables, Assertion, State, StateView
+from bla.parse import parse_program
 from tabulate import tabulate
-from parse import parse_program
 
 def proof(fns: list[Callable], domain: type[Variables], assertions: list[Assertion]=None) -> bool:
     if assertions is None:

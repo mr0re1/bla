@@ -1,8 +1,10 @@
 from typing import Callable
 import ast, inspect
-from core import Prog, Op, Label, Variables, ValuePredicate, eq, const, mov, cond, Assertion
-from asserts import PosAssert
 from dataclasses import dataclass
+
+from bla.core import Prog, Op, Label, Variables, ValuePredicate, eq, const, mov, cond, Assertion
+from bla.asserts import PosAssert
+
 
 @dataclass
 class _ParseCtx:

@@ -1,5 +1,5 @@
 from typing import Callable
-from core import Assertion, ValuePredicate, State, StateView
+from bla.core import Assertion, ValuePredicate, State, StateView
 
 class BaseAssertion(Assertion):
     def __init__(self, fn: Callable[[StateView], None]):
