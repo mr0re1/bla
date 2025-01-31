@@ -1,23 +1,20 @@
-from typing import Callable
-from bla.core import Assertion, ValuePredicate, State, StateView
+from dataclasses import dataclass
 
-class BaseAssertion(Assertion):
-    def __init__(self, fn: Callable[[StateView], None]):
-        self.fn = fn
+from bla.core import Assertion, FailedAssert, ValuePredicate, StateView
 
-    def check(self, state: StateView) -> None:
-        self.fn(state)
-
-
+@dataclass(frozen=True)
 class PosAssert(Assertion):
-    def __init__(self, pred: ValuePredicate, prog_name: str, pos: int, msg: str):
-        self.pred = pred
-        self.prog_name = prog_name
-        self.pos = pos
-        self.msg = msg
+    """
+    Assertion that is only checked in particular position of the program 
+    - i.e. normal assert behavior.
+    """
+    pred: ValuePredicate
+    prog_name: str
+    pos: int
+    msg: str
 
     def check(self, state: StateView) -> None:
         if state.pos(self.prog_name) != self.pos:
             return
         if not self.pred(state.state.val):
-             raise Exception(f"{self.prog_name}:{self.pos}: {self.msg}")
+             raise FailedAssert(f"{self.prog_name}:{self.pos}: {self.msg}")

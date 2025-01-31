@@ -22,7 +22,7 @@ class StateView:
         for i, p in enumerate(self.progs):
             if p.name == name:
                 return i
-        raise ValueError(f"Program {name} not found")
+        raise KeyError(f"Program {name} not found")
     
     def pos(self, name) -> int:
         pi = self.prog_idx(name)
@@ -32,7 +32,6 @@ class StateView:
         return self.state.val[var]
         
 
-
 Label = str
 Op = Callable[[Values], tuple[Label|None, Values]]
 ValuePredicate = Callable[[Values], bool]
@@ -41,6 +40,8 @@ class Assertion:
     def check(self, state: StateView) -> None:
         raise NotImplementedError
 
+class FailedAssert(Exception):
+    pass
 
 def mov(var: Variables, value: any) -> Op:
     def impl(mem: Values):

@@ -1,6 +1,6 @@
 from typing import Callable
 
-from bla.core import  Variables, Assertion, State, StateView
+from bla.core import  Variables, Assertion, State, StateView, FailedAssert
 from bla.parse import parse_program
 from tabulate import tabulate
 
@@ -25,7 +25,7 @@ def proof(fns: list[Callable], domain: type[Variables], assertions: list[Asserti
         for a in assertions:
             try:
                 a.check(sv)
-            except Exception as e:
+            except FailedAssert as e:
                 explain(sv, domain, visited)
                 print(f"Assertion failed: {e}")
                 return False

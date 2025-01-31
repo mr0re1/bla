@@ -19,9 +19,3 @@ def server():
 # Proof that assertion holds
 proof([client, server], D)
 # Spoiler: it doesn't
-
-
-    
-
-
-
