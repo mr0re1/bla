@@ -1,5 +1,4 @@
 import glob
-import sys
 from os import path
 import subprocess
 import argparse
@@ -43,9 +42,6 @@ Expected ======\n{expectations}
 ========== Got:\n{got}
 ==============="""
         )
-
-
-import subprocess
 
 
 def run_golden_tests(generate: bool) -> bool:
