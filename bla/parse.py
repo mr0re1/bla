@@ -2,7 +2,7 @@ from typing import Callable
 import ast, inspect
 from dataclasses import dataclass
 
-from bla.core import Prog, Op, Label, Variables, ValuePredicate, eq, const, mov, cond, Assertion
+from bla.core import Prog, Op, Label, Variables, ValuePredicate, eq, const, mov, cond, Assertion, negate, goto
 from bla.asserts import PosAssert
 
 
@@ -15,6 +15,7 @@ class _ParseCtx:
     ops: list[Op|Label]
     line_mapping: list[int] # maps from state.pos to src line
     asserts: list[Assertion]
+    _nxt_label: int = 0
 
     def check_var(self, var: str) -> Variables:
         assert var in self.domain.__members__, f"Unknown variable {var}"
@@ -30,7 +31,11 @@ class _ParseCtx:
     def lineno(self, node: ast.AST) -> int:
         return node.lineno - self.line_offset
     
-    def add_op(self, op: Op|Label, stmt: ast.AST) -> None:
+    def uniq_label(self) -> int:
+        self._nxt_label += 1
+        return f"__lbl_{self._nxt_label}"
+    
+    def add_op(self, op: Op|Label, node: ast.AST) -> None:
         match op:
             case Label():
                 self.ops.append(op) # labels also added to ops
@@ -38,7 +43,7 @@ class _ParseCtx:
                 self.asserts.append(op)
             case _: # Op; TODO: better check
                 self.ops.append(op)
-                self.line_mapping.append(self.lineno(stmt))
+                self.line_mapping.append(self.lineno(node))
 
 
 def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
@@ -51,35 +56,71 @@ def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
         case ast.Constant(val):
             assert val in [True, False], f"Invalid value {val}"
             return const(val)
+        case ast.Name(var):
+            return eq(ctx.check_var(var), True)
         case _:
             raise Exception("Expected comparison, got", ast.unparse(expr))
                             
 
-def _parse_op(t: ast.stmt, ctx: _ParseCtx) -> Op|Label|Assertion:
+def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     match t:
         case ast.Assign([ast.Name(var)], ast.Constant(val)):
             ctx.check_var_val(var, val)
-            return mov(ctx.var(var), val)
+            ctx.add_op(mov(ctx.var(var), val), t)
         case ast.Assign([ast.Name(var)], ast.Name(val)):
-            return mov(ctx.check_var(var), ctx.check_var(val))
-        case ast.Assign():
+            ctx.add_op(mov(ctx.check_var(var), ctx.check_var(val)), t)
+        case _:
             raise ValueError("Expected assignment format:\n\t var = constant | var")
-
-        case ast.If(cmp,  [ast.Expr(ast.Constant(lbl))], orelse=[]) if isinstance(lbl, str):
-            pred = _parse_val_predicate(cmp, ctx)
-            return cond(pred, lbl)
-        case ast.If():
-            raise ValueError('Expected "if" format:\n\t if var == const: "label"')
         
-        case ast.Expr(ast.Constant(lbl)) if isinstance(lbl, str):
-            return lbl
+
+def _parse_if(t: ast.If, ctx: _ParseCtx):
+    if t.orelse:
+        raise NotImplementedError("Else clause is not supported yet")
+    
+    pred = _parse_val_predicate(t.test, ctx)
+    else_lbl = ctx.uniq_label()
+    if_op = cond(negate(pred), else_lbl)
+
+    ctx.add_op(if_op, t)
+    _parse_body(t.body, ctx)
+    ctx.add_op(else_lbl, t)
+
+def _parse_while(t: ast.While, ctx: _ParseCtx):
+    if t.orelse:
+        raise NotImplementedError("Else clause is not supported yet")
+    
+    pred = _parse_val_predicate(t.test, ctx)
+    begin_lbl = ctx.uniq_label()
+    end_lbl = ctx.uniq_label()
+
+    ctx.add_op(begin_lbl, t)
+    ctx.add_op(cond(negate(pred), end_lbl), t)
+    _parse_body(t.body, ctx)
+    ctx.add_op(goto(begin_lbl), t)
+    ctx.add_op(end_lbl, t)
+
+        
+def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
+    match t:
+        case ast.Assign(): _parse_assign(t, ctx)
+        case ast.If(): _parse_if(t, ctx)
+        case ast.While(): _parse_while(t, ctx)
+        case ast.Pass(): pass # don't add anything to prog
+        
+        # TODO: reconsider support for labels
+        # case ast.Expr(ast.Constant(lbl)) if isinstance(lbl, str):
+        #     ctx.add_op(lbl, t)
         
         case ast.Assert(tst):
             pred = _parse_val_predicate(tst, ctx)
-            return PosAssert(pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t))
+            ctx.add_op(PosAssert(pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t)), t)
       
         case _:
-            raise Exception("Unknown op", t)
+            raise Exception("Unknown op", ast.unparse(t))
+
+def _parse_body(body: list[ast.stmt], ctx: _ParseCtx):
+    for stmt in body:
+        _parse_stmt(stmt, ctx)
 
 def _check_empty_args(args: ast.arguments) -> None:
     if args.args or args.vararg or args.kwarg:
@@ -95,10 +136,8 @@ def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Asse
                 prog_name=name, src=src, domain=domain, line_offset=t.body[0].lineno, 
                 # TODO: use default vals
                 ops=[], line_mapping=[], asserts=[])
-            for stmt in body:
-                op = _parse_op(stmt, ctx)
-                ctx.add_op(op, stmt)
-
+            _parse_body(body, ctx)
+            
         case _:
             raise Exception("Expected a single function, got", t.body)
     return PrettyProg(ctx), ctx.asserts

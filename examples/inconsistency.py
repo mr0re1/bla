@@ -14,9 +14,8 @@ def client():
 
 # Eventually consistent DB
 def server():
-    "begin" # while True
-    A_get = A_set
-    if True: "begin"
+    while True:
+        A_get = A_set
 
 # Proof that assertion holds
 proof([client, server], D)

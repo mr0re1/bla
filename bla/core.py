@@ -63,6 +63,12 @@ def cond(pred: ValuePredicate, lbl: str) -> Op:
         return lbl if pred(val) else None, val
     return impl
 
+def goto(lbl: str) -> Op:
+    def impl(val: Values):
+        return lbl, val
+    return impl
+
+
 def eq(var: Variables, value: any) -> ValuePredicate:
     def impl(mem: Values) -> bool:
         val = value # to satisfy "match"
@@ -74,6 +80,9 @@ def eq(var: Variables, value: any) -> ValuePredicate:
 
 def const(val: bool) -> ValuePredicate:
     return lambda _: val
+
+def negate(pred: ValuePredicate) -> ValuePredicate:
+    return lambda val: not pred(val)
 
 class Prog:
     def __init__(self, name, ops: list[Op | Label]):
