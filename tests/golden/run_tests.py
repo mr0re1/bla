@@ -32,13 +32,12 @@ def run_golden_test(script: str, generate: bool) -> bool:
 
     print(" - FAIL: mismatch", end="")
     if generate:
-        print(f" updating expectations")
+        print(f" ... updating expectations")
         with open(expectations_path, "w") as f:
             f.write(got)
     else:
         print(
-            f"""
-Expected ======\n{expectations}
+            f"""Expected: ======\n{expectations}
 ========== Got:\n{got}
 ==============="""
         )
