@@ -81,11 +81,16 @@ def _parse_op(t: ast.stmt, ctx: _ParseCtx) -> Op|Label|Assertion:
         case _:
             raise Exception("Unknown op", t)
 
+def _check_empty_args(args: ast.arguments) -> None:
+    if args.args or args.vararg or args.kwarg:
+        raise Exception(f"Expected no arguments, got {args.__dict__}")
+
 def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Assertion]]:
     src = inspect.getsource(f)
     t = ast.parse(src)
     match t.body:
         case [ast.FunctionDef(name, args, body)]:
+            _check_empty_args(args)
             ctx = _ParseCtx(
                 prog_name=name, src=src, domain=domain, line_offset=t.body[0].lineno, 
                 # TODO: use default vals
