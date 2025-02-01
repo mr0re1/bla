@@ -9,3 +9,12 @@ repos:
     rev: 22.10.0
     hooks:
     -   id: black
+
+-   repo: local
+    hooks:
+    - id: golden
+      name: golden
+      entry: python tests/golden/run_tests.py --generate
+      language: system
+      types: [python]
+      pass_filenames: false
