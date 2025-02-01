@@ -10,11 +10,12 @@ def _run_asserts(asserts: list[Assertion], sv: StateView, cyclic: bool) -> Faile
             a.check(sv, cyclic=cyclic)
         except FailedAssert as e:
             return e
+    return None
 
 
 def proof(fns: list[Callable], 
           domain: type[Variables], 
-          assertions: list[Assertion]=None) -> bool:
+          assertions: list[Assertion]|None=None) -> bool:
     if assertions is None:
         assertions = []
     progs = []
@@ -27,7 +28,8 @@ def proof(fns: list[Callable],
         pos=tuple([0] * len(progs)),
         val=tuple([False] * len(domain)))
     
-    stack, visited = [state], {state: None}
+    stack = [state]
+    visited: dict[State, State|None] = {state: None}
     while stack:
         state = stack.pop()
         sv = StateView(state, progs)

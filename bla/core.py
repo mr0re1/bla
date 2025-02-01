@@ -1,16 +1,16 @@
 from enum import IntEnum
-from typing import Callable
+from typing import Callable, Any
 from dataclasses import dataclass
 
 class Variables(IntEnum):
     def _generate_next_value_(name, start, count, last_values): return count
 
 
-Values = tuple[bool]
+Values = tuple[bool, ...]
 
 @dataclass(frozen=True)
 class State:
-    pos: tuple[int]
+    pos: tuple[int, ...]
     val: Values
 
 @dataclass(frozen=True)
@@ -43,7 +43,7 @@ class Assertion:
 class FailedAssert(Exception):
     pass
 
-def mov(var: Variables, value: any) -> Op:
+def mov(var: Variables, value: Any) -> Op:
     def impl(mem: Values):
         val = value # to satisfy "match"
         match val:
@@ -69,7 +69,7 @@ def goto(lbl: str) -> Op:
     return impl
 
 
-def eq(var: Variables, value: any) -> ValuePredicate:
+def eq(var: Variables, value: Any) -> ValuePredicate:
     def impl(mem: Values) -> bool:
         val = value # to satisfy "match"
         match val:
@@ -88,7 +88,7 @@ class Prog:
     def __init__(self, name, ops: list[Op | Label]):
         self.name = name
         self.labels: dict[str, int] = {}
-        self.ops = []
+        self.ops: list[Op] = []
 
         for op in ops:
             if isinstance(op, Label):

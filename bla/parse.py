@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 import ast, inspect
 from dataclasses import dataclass
 
@@ -21,7 +21,7 @@ class _ParseCtx:
         assert var in self.domain.__members__, f"Unknown variable {var}"
         return self.domain[var]
 
-    def check_var_val(self, var: str, val: any):
+    def check_var_val(self, var: str, val: Any):
         self.check_var(var)
         assert val in [True, False], f"Invalid value {val} for {var}"
 
@@ -31,11 +31,11 @@ class _ParseCtx:
     def lineno(self, node: ast.AST) -> int:
         return node.lineno - self.line_offset
     
-    def uniq_label(self) -> int:
+    def uniq_label(self) -> str:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
-    
-    def add_op(self, op: Op|Label, node: ast.AST) -> None:
+
+    def add_op(self, op: Op|Label|Assertion, node: ast.AST) -> None:
         match op:
             case Label():
                 self.ops.append(op) # labels also added to ops
