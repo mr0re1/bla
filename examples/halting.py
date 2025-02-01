@@ -8,8 +8,8 @@ from bla.asserts import HALTS_ASSERT
 D = Variables("Vars", ["_"])
 
 def loop():
-    "begin" # while True
-    if True: "begin"
+    while True:
+        pass
 
 proof([loop], D, assertions=[HALTS_ASSERT])
 
