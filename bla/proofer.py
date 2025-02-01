@@ -1,10 +1,13 @@
 from typing import Callable
 
-from bla.core import  Variables, Assertion, State, StateView, FailedAssert
+from bla.core import Variables, Assertion, State, StateView, FailedAssert
 from bla.parse import parse_program
 from tabulate import tabulate
 
-def _run_asserts(asserts: list[Assertion], sv: StateView, cyclic: bool) -> FailedAssert|None:
+
+def _run_asserts(
+    asserts: list[Assertion], sv: StateView, cyclic: bool
+) -> FailedAssert | None:
     for a in asserts:
         try:
             a.check(sv, cyclic=cyclic)
@@ -13,9 +16,11 @@ def _run_asserts(asserts: list[Assertion], sv: StateView, cyclic: bool) -> Faile
     return None
 
 
-def proof(fns: list[Callable], 
-          domain: type[Variables], 
-          assertions: list[Assertion]|None=None) -> bool:
+def proof(
+    fns: list[Callable],
+    domain: type[Variables],
+    assertions: list[Assertion] | None = None,
+) -> bool:
     if assertions is None:
         assertions = []
     progs = []
@@ -24,12 +29,10 @@ def proof(fns: list[Callable],
         progs.append(prog)
         assertions += asserts
 
-    state = State(
-        pos=tuple([0] * len(progs)),
-        val=tuple([False] * len(domain)))
-    
+    state = State(pos=tuple([0] * len(progs)), val=tuple([False] * len(domain)))
+
     stack = [state]
-    visited: dict[State, State|None] = {state: None}
+    visited: dict[State, State | None] = {state: None}
     while stack:
         state = stack.pop()
         sv = StateView(state, progs)
@@ -45,10 +48,10 @@ def proof(fns: list[Callable],
                 continue
             npos, nv = prog.run(pos, state.val)
             nxt = State(
-                pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip+1:]), 
-                val=nv)
-            
-            if nxt in visited: # Detected cycle
+                pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip + 1 :]), val=nv
+            )
+
+            if nxt in visited:  # Detected cycle
                 if e := _run_asserts(assertions, sv, cyclic=True):
                     explain(sv, domain, visited)
                     print(f"Assertion failed: {e}")
@@ -61,14 +64,13 @@ def proof(fns: list[Callable],
     return True
 
 
-
 def explain(sv: StateView, domain, parents):
     chain = []
     progs, state = sv.progs, sv.state
     while state is not None:
         chain.append(state)
         state = parents[state]
-    
+
     for i, state in enumerate(reversed(chain)):
         print(f"----- step #{i}:")
 
@@ -77,5 +79,3 @@ def explain(sv: StateView, domain, parents):
         tbl = [pgs + [vls]]
         print(tabulate(tbl, tablefmt="presto"))
         print("\n")
-
-

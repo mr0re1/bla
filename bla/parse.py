@@ -2,7 +2,20 @@ from typing import Callable, Any
 import ast, inspect
 from dataclasses import dataclass
 
-from bla.core import Prog, Op, Label, Variables, ValuePredicate, eq, const, mov, cond, Assertion, negate, goto
+from bla.core import (
+    Prog,
+    Op,
+    Label,
+    Variables,
+    ValuePredicate,
+    eq,
+    const,
+    mov,
+    cond,
+    Assertion,
+    negate,
+    goto,
+)
 from bla.asserts import PosAssert
 
 
@@ -12,8 +25,8 @@ class _ParseCtx:
     src: str
     domain: type[Variables]
     line_offset: int
-    ops: list[Op|Label]
-    line_mapping: list[int] # maps from state.pos to src line
+    ops: list[Op | Label]
+    line_mapping: list[int]  # maps from state.pos to src line
     asserts: list[Assertion]
     _nxt_label: int = 0
 
@@ -27,21 +40,21 @@ class _ParseCtx:
 
     def var(self, name: str) -> Variables:
         return self.check_var(name)
-    
+
     def lineno(self, node: ast.AST) -> int:
         return node.lineno - self.line_offset
-    
+
     def uniq_label(self) -> str:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
 
-    def add_op(self, op: Op|Label|Assertion, node: ast.AST) -> None:
+    def add_op(self, op: Op | Label | Assertion, node: ast.AST) -> None:
         match op:
             case Label():
-                self.ops.append(op) # labels also added to ops
+                self.ops.append(op)  # labels also added to ops
             case Assertion():
                 self.asserts.append(op)
-            case _: # Op; TODO: better check
+            case _:  # Op; TODO: better check
                 self.ops.append(op)
                 self.line_mapping.append(self.lineno(node))
 
@@ -60,7 +73,7 @@ def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
             return eq(ctx.check_var(var), True)
         case _:
             raise Exception("Expected comparison, got", ast.unparse(expr))
-                            
+
 
 def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     match t:
@@ -71,12 +84,12 @@ def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
             ctx.add_op(mov(ctx.check_var(var), ctx.check_var(val)), t)
         case _:
             raise ValueError("Expected assignment format:\n\t var = constant | var")
-        
+
 
 def _parse_if(t: ast.If, ctx: _ParseCtx):
     if t.orelse:
         raise NotImplementedError("Else clause is not supported yet")
-    
+
     pred = _parse_val_predicate(t.test, ctx)
     else_lbl = ctx.uniq_label()
     if_op = cond(negate(pred), else_lbl)
@@ -85,10 +98,11 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
     _parse_body(t.body, ctx)
     ctx.add_op(else_lbl, t)
 
+
 def _parse_while(t: ast.While, ctx: _ParseCtx):
     if t.orelse:
         raise NotImplementedError("Else clause is not supported yet")
-    
+
     pred = _parse_val_predicate(t.test, ctx)
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
@@ -99,32 +113,44 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     ctx.add_op(goto(begin_lbl), t)
     ctx.add_op(end_lbl, t)
 
-        
+
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
     match t:
-        case ast.Assign(): _parse_assign(t, ctx)
-        case ast.If(): _parse_if(t, ctx)
-        case ast.While(): _parse_while(t, ctx)
-        case ast.Pass(): pass # don't add anything to prog
-        
+        case ast.Assign():
+            _parse_assign(t, ctx)
+        case ast.If():
+            _parse_if(t, ctx)
+        case ast.While():
+            _parse_while(t, ctx)
+        case ast.Pass():
+            pass  # don't add anything to prog
+
         # TODO: reconsider support for labels
         # case ast.Expr(ast.Constant(lbl)) if isinstance(lbl, str):
         #     ctx.add_op(lbl, t)
-        
+
         case ast.Assert(tst):
             pred = _parse_val_predicate(tst, ctx)
-            ctx.add_op(PosAssert(pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t)), t)
-      
+            ctx.add_op(
+                PosAssert(
+                    pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t)
+                ),
+                t,
+            )
+
         case _:
             raise Exception("Unknown op", ast.unparse(t))
+
 
 def _parse_body(body: list[ast.stmt], ctx: _ParseCtx):
     for stmt in body:
         _parse_stmt(stmt, ctx)
 
+
 def _check_empty_args(args: ast.arguments) -> None:
     if args.args or args.vararg or args.kwarg:
         raise Exception(f"Expected no arguments, got {args.__dict__}")
+
 
 def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Assertion]]:
     src = inspect.getsource(f)
@@ -133,11 +159,17 @@ def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Asse
         case [ast.FunctionDef(name, args, body)]:
             _check_empty_args(args)
             ctx = _ParseCtx(
-                prog_name=name, src=src, domain=domain, line_offset=t.body[0].lineno, 
+                prog_name=name,
+                src=src,
+                domain=domain,
+                line_offset=t.body[0].lineno,
                 # TODO: use default vals
-                ops=[], line_mapping=[], asserts=[])
+                ops=[],
+                line_mapping=[],
+                asserts=[],
+            )
             _parse_body(body, ctx)
-            
+
         case _:
             raise Exception("Expected a single function, got", t.body)
     return PrettyProg(ctx), ctx.asserts
@@ -147,7 +179,7 @@ class PrettyProg(Prog):
     def __init__(self, ctx: _ParseCtx):
         super().__init__(ctx.prog_name, ctx.ops)
         self.ctx = ctx
-    
+
     def render(self, pos) -> Label:
         pos = self.ctx.line_mapping[pos] if pos < len(self.ctx.line_mapping) else None
         lines = self.ctx.src.split("\n")
@@ -157,7 +189,9 @@ class PrettyProg(Prog):
             if i == pos:
                 res += f"->{line[2:]}\n"
             else:
-                if i + 1 == len(lines) and not line: continue # skip last empty line
+                if i + 1 == len(lines) and not line:
+                    continue  # skip last empty line
                 res += f"{line}\n"
-        if pos == None: res += "->==HALTED=="
+        if pos == None:
+            res += "->==HALTED=="
         return res

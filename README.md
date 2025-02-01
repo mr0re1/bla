@@ -12,7 +12,7 @@ from bla.proof import proof
 # Declare domain - the set of variables used in the program
 D = Variables("Vars", ["A_set", "A_get"])
 
-# The client, that `db.write(A, true)" to DB 
+# The client, that `db.write(A, true)" to DB
 # and expects "db.read(A) = true"
 def client():
     A_set = True
