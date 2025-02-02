@@ -18,39 +18,27 @@ def run_golden_test(script: str, generate: bool) -> bool:
             expectations = f.read()
     except FileNotFoundError:
         print(f" - FAIL: {expectations_path} is not found", end="")
-        if generate:
-            print(f" ... generating one")
-            with open(expectations_path, "w") as f:
-                f.write(got)
+    else:
+        if expectations == got:
+            print(" - PASS")
+            return True
         else:
-            print("")  # EOL
-        return False
+            print(" - FAIL: mismatch", end="")
 
-    if got == expectations:
-        print(" - PASS")
-        return True
-
-    print(" - FAIL: mismatch", end="")
     if generate:
         print(f" ... updating expectations")
         with open(expectations_path, "w") as f:
             f.write(got)
     else:
-        print(
-            f"""Expected: ======\n{expectations}
-========== Got:\n{got}
-==============="""
-        )
+        print(f"\nGot: ======\n{got}\n==========")
+    return False
 
 
 def run_golden_tests(generate: bool) -> bool:
     subjs = glob.glob("examples/*.py")
     assert subjs, "Can't find any examples/*.py"
     print("Running golden tests:")
-    ok = True
-    for subj in subjs:
-        ok = ok and run_golden_test(subj, generate=generate)
-    return ok
+    return all([run_golden_test(subj, generate=generate) for subj in subjs])
 
 
 if __name__ == "__main__":
