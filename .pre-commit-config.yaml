@@ -14,7 +14,7 @@ repos:
     hooks:
     - id: golden
       name: golden
-      entry: python tests/golden/run_tests.py --generate
+      entry: python tests/golden/run_tests.py --update
       language: system
       types: [python]
       pass_filenames: false

@@ -31,24 +31,28 @@ proof([client, server], D)
 ```sh
 $ python3 examples/inconsistency.py
 ----- step #0:
- def client():            | def server():            | A_set=False
- ->  A_set = True         |     "begin" # while True | A_get=False
-     assert A_get == True | ->  A_get = A_set        |
-                          |     if True: "begin"     |
+ def client():            | def server():         | A_set=False
+ ->  A_set = True         | ->  while True:       | A_get=False
+     assert A_get == True |         A_get = A_set |
 
 
 ----- step #1:
- def client():            | def server():            | A_set=False
- ->  A_set = True         |     "begin" # while True | A_get=False
-     assert A_get == True |     A_get = A_set        |
-                          | ->  if True: "begin"     |
+ def client():            | def server():         | A_set=False
+ ->  A_set = True         |     while True:       | A_get=False
+     assert A_get == True | ->      A_get = A_set |
 
 
 ----- step #2:
- def client():            | def server():            | A_set=True
-     A_set = True         |     "begin" # while True | A_get=False
-     assert A_get == True |     A_get = A_set        |
- ->==HALTED==             | ->  if True: "begin"     |
+ def client():            | def server():         | A_set=False
+ ->  A_set = True         | ->  while True:       | A_get=False
+     assert A_get == True |         A_get = A_set |
+
+
+----- step #3:
+ def client():            | def server():         | A_set=True
+     A_set = True         | ->  while True:       | A_get=False
+     assert A_get == True |         A_get = A_set |
+ ->==HALTED==             |                       |
 
 
 Assertion failed: client:1: assert A_get == True
