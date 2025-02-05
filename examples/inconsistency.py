@@ -21,8 +21,8 @@ def server():
 proof(
     [client, server],
     {
-        "A_set": bool,
-        "A_get": bool,
+        "A_set": False,
+        "A_get": False,
     },
 )
 # Spoiler: it doesn't

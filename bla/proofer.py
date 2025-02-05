@@ -1,9 +1,9 @@
 from typing import Callable
 
-from bla.core import Assertion, State, StateView, FailedAssert, MemMap
+from bla.memory import MemMap
+from bla.core import Assertion, State, StateView, FailedAssert
 from bla.parse import parse_program
 from tabulate import tabulate
-from bla.memory import BaseMemMap
 
 
 def _run_asserts(
@@ -25,7 +25,7 @@ def proof(
     if assertions is None:
         assertions = []
 
-    mm = BaseMemMap(domain)
+    mm = MemMap(domain)
 
     progs = []
     for fn in fns:
@@ -61,7 +61,7 @@ def proof(
                 explain(sv, mm, visited)
                 print(f"Assertion failed: {e}")
                 return False
-
+            # TODO: need to perform type assertions
             nxt = State(
                 pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip + 1 :]), val=nv
             )

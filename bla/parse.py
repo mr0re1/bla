@@ -3,7 +3,8 @@ import ast, inspect
 from dataclasses import dataclass, field
 
 from bla import ops
-from bla.core import Prog, Op, Label, ValuePredicate, Sentinel, MemMap, Reference
+from bla.memory import MemMap, Reference
+from bla.core import Prog, Op, Label, ValuePredicate, Sentinel
 
 
 @dataclass

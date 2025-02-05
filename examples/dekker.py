@@ -8,10 +8,10 @@ from bla import proof
 from bla.asserts import HALTS_ASSERT
 
 D = {
-    "wants_to_enter_0": bool,
-    "wants_to_enter_1": bool,
-    "turn": bool,
-    "critical_section": bool,
+    "wants_to_enter_0": False,
+    "wants_to_enter_1": False,
+    "turn": False,
+    "critical_section": False,
 }
 
 

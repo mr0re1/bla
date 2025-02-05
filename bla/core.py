@@ -1,32 +1,7 @@
 from enum import Enum
 from typing import Callable, Protocol, Any
 from dataclasses import dataclass
-
-Memory = tuple[Any, ...]
-
-
-@dataclass(frozen=True)
-class Reference:
-    name: str
-
-    def __repr__(self):
-        return self.name
-
-
-class MemMap(Protocol):
-    def addr(self, ref: Reference) -> int:
-        ...
-
-    def init(self) -> Memory:
-        ...
-
-    def validate(self, ref: Reference, val: Any) -> None:
-        ...
-
-    def dump(self, mem: Memory) -> dict[Reference, Any]:
-        ...
-
-    # TODO: make a expression translator, so operations can be: eval("A == 3") -> eval("m[2] == 3")
+from bla.memory import Memory
 
 
 @dataclass(frozen=True)

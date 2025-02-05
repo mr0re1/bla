@@ -21,7 +21,7 @@ def corrupter():
     A = False
 
 
-D = {"A": bool}
+D = {"A": False}
 
 print("*** Expected failure:")
 proof([setter_checker_non_atomic, corrupter], D)

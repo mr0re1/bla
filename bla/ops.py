@@ -1,6 +1,7 @@
 from typing import Any
 
-from bla.core import Op, ValuePredicate, Memory, FailedAssert, Reference, MemMap
+from bla.memory import Reference, MemMap, Memory
+from bla.core import Op, ValuePredicate, FailedAssert
 
 
 def _assign_mem(mem: Memory, addr: int, value: Any) -> Memory:
