@@ -4,12 +4,15 @@ import sys
 sys.path.insert(0, "../bla")
 
 
-from bla import Variables, proof
+from bla import proof
 from bla.asserts import HALTS_ASSERT
 
-D = Variables(
-    "Vars", ["wants_to_enter_0", "wants_to_enter_1", "turn", "critical_section"]
-)
+D = {
+    "wants_to_enter_0": bool,
+    "wants_to_enter_1": bool,
+    "turn": bool,
+    "critical_section": bool,
+}
 
 
 def p0():

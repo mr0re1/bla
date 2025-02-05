@@ -2,10 +2,7 @@ import sys
 
 sys.path.insert(0, "../bla")
 
-from bla import Variables, proof
-
-# Declare domain - the set of variables used in the program
-D = Variables("Vars", ["A_set", "A_get"])
+from bla import proof
 
 # The client, that `db.write(A, true)" to DB
 # and expects "db.read(A) = true"
@@ -21,5 +18,11 @@ def server():
 
 
 # Proof that assertion holds
-proof([client, server], D)
+proof(
+    [client, server],
+    {
+        "A_set": bool,
+        "A_get": bool,
+    },
+)
 # Spoiler: it doesn't

@@ -2,11 +2,8 @@ import sys
 
 sys.path.insert(0, "../bla")
 
-from bla import Variables, proof
+from bla import proof
 from bla.asserts import HALTS_ASSERT
-
-# Declare domain - the set of variables used in the program
-D = Variables("Vars", ["_"])
 
 
 def loop():
@@ -14,4 +11,4 @@ def loop():
         pass
 
 
-proof([loop], D, assertions=[HALTS_ASSERT])
+proof([loop], domain={}, assertions=[HALTS_ASSERT])

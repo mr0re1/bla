@@ -1,40 +1,48 @@
 from typing import Any
 
-from bla.core import Variables, Op, ValuePredicate, Values, FailedAssert
+from bla.core import Op, ValuePredicate, Memory, FailedAssert, Reference, MemMap
 
 
-def mov(var: Variables, value: Any) -> Op:
-    def impl(mem: Values):
-        val = value  # to satisfy "match"
-        match val:
-            case Variables():  # A = B
-                val = mem[val]
-            case _:  # A = True
-                pass
+def _assign_mem(mem: Memory, addr: int, value: Any) -> Memory:
+    nv = list(mem)
+    nv[addr] = value
+    return tuple(nv)
 
-        nv = list(mem)
-        nv[var] = val
-        return None, tuple(nv)
+
+def mov(mm: MemMap, var: Reference, value: Any | Reference) -> Op:
+    daddr = mm.addr(var)
+    if isinstance(value, Reference):
+        saddr = mm.addr(value)
+        # TODO: check type match
+
+        def impl(mem: Memory):
+            return None, _assign_mem(mem, daddr, mem[saddr])
+
+    else:
+        mm.validate(var, value)
+
+        def impl(mem: Memory):
+            return None, _assign_mem(mem, daddr, value)
 
     return impl
 
 
 def cond(pred: ValuePredicate, lbl: str) -> Op:
-    def impl(val: Values):
+    def impl(val: Memory):
         return (lbl, val) if pred(val) else (None, val)
 
     return impl
 
 
 def goto(lbl: str) -> Op:
-    def impl(val: Values):
+    def impl(val: Memory):
         return lbl, val
 
     return impl
 
 
 def assert_op(pred: ValuePredicate, msg: str):
-    def impl(val: Values):
+    def impl(val: Memory):
         if not pred(val):
             raise FailedAssert(msg)
         return None, val
@@ -42,13 +50,20 @@ def assert_op(pred: ValuePredicate, msg: str):
     return impl
 
 
-def eq(var: Variables, value: Any) -> ValuePredicate:
-    def impl(mem: Values) -> bool:
-        val = value  # to satisfy "match"
-        match val:
-            case Variables():
-                val = mem[value]
-        return mem[var] == value
+def eq(mm: MemMap, var: Reference, value: Any | Reference) -> ValuePredicate:
+    addr = mm.addr(var)
+
+    if isinstance(value, Reference):
+        caddr = mm.addr(value)
+        # TODO: check type match
+        def impl(mem: Memory) -> bool:
+            return mem[addr] == mem[caddr]
+
+    else:
+        mm.validate(var, value)
+
+        def impl(mem: Memory) -> bool:
+            return mem[addr] == value
 
     return impl
 

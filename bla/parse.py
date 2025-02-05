@@ -3,14 +3,14 @@ import ast, inspect
 from dataclasses import dataclass, field
 
 from bla import ops
-from bla.core import Prog, Op, Label, Variables, ValuePredicate, Sentinel
+from bla.core import Prog, Op, Label, ValuePredicate, Sentinel, MemMap, Reference
 
 
 @dataclass
 class _ParseCtx:
     prog_name: str
     src: str
-    domain: type[Variables]
+    mm: MemMap
     line_offset: int
     stmts: list[Op | Label | Sentinel] = field(default_factory=list)
     line_mapping: list[int] = field(
@@ -22,16 +22,10 @@ class _ParseCtx:
     _break_lbls: list[Label] = field(default_factory=list)
     _continue_lbls: list[Label] = field(default_factory=list)
 
-    def check_var(self, var: str) -> Variables:
-        assert var in self.domain.__members__, f"Unknown variable {var}"
-        return self.domain[var]
-
-    def check_var_val(self, var: str, val: Any):
-        self.check_var(var)
-        assert val in [True, False], f"Invalid value {val} for {var}"
-
-    def var(self, name: str) -> Variables:
-        return self.check_var(name)
+    def ref(self, var: str) -> Reference:
+        ref = Reference(var)
+        self.mm.addr(ref)
+        return ref
 
     def lineno(self, node: ast.stmt) -> int:
         return node.lineno - self.line_offset
@@ -54,15 +48,14 @@ class _ParseCtx:
 def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
     match expr:
         case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Constant(val)]):
-            ctx.check_var_val(var, val)
-            return ops.eq(ctx.var(var), val)
+            return ops.eq(ctx.mm, ctx.ref(var), val)
         case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Name(val)]):
-            return ops.eq(ctx.check_var(var), ctx.check_var(val))
+            return ops.eq(ctx.mm, ctx.ref(var), ctx.ref(val))
         case ast.Constant(val):
             assert val in [True, False], f"Invalid value {val}"
             return ops.const(val)
         case ast.Name(var):
-            return ops.eq(ctx.check_var(var), True)
+            return ops.eq(ctx.mm, ctx.ref(var), True)
         case _:
             raise Exception("Expected comparison, got", ast.unparse(expr))
 
@@ -70,10 +63,9 @@ def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
 def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     match t:
         case ast.Assign([ast.Name(var)], ast.Constant(val)):
-            ctx.check_var_val(var, val)
-            ctx.add_stmt(ops.mov(ctx.var(var), val), t)
+            ctx.add_stmt(ops.mov(ctx.mm, ctx.ref(var), val), t)
         case ast.Assign([ast.Name(var)], ast.Name(val)):
-            ctx.add_stmt(ops.mov(ctx.check_var(var), ctx.check_var(val)), t)
+            ctx.add_stmt(ops.mov(ctx.mm, ctx.ref(var), ctx.ref(val)), t)
         case _:
             raise ValueError("Expected assignment format:\n\t var = constant | var")
 
@@ -195,7 +187,7 @@ def _check_empty_args(args: ast.arguments) -> None:
         raise Exception(f"Expected no arguments, got {args.__dict__}")
 
 
-def parse_program(f: Callable, domain: type[Variables]) -> Prog:
+def parse_program(f: Callable, mm: MemMap) -> Prog:
     src = inspect.getsource(f)
     t = ast.parse(src)
     match t.body:
@@ -204,7 +196,7 @@ def parse_program(f: Callable, domain: type[Variables]) -> Prog:
             ctx = _ParseCtx(
                 prog_name=name,
                 src=src,
-                domain=domain,
+                mm=mm,
                 line_offset=t.body[0].lineno,
             )
             _parse_body(body, ctx)

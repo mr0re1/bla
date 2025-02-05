@@ -1,20 +1,38 @@
-from enum import IntEnum, Enum
-from typing import Callable, Protocol
+from enum import Enum
+from typing import Callable, Protocol, Any
 from dataclasses import dataclass
 
-
-class Variables(IntEnum):
-    def _generate_next_value_(name, start, count, last_values):
-        return count
+Memory = tuple[Any, ...]
 
 
-Values = tuple[bool, ...]
+@dataclass(frozen=True)
+class Reference:
+    name: str
+
+    def __repr__(self):
+        return self.name
+
+
+class MemMap(Protocol):
+    def addr(self, ref: Reference) -> int:
+        ...
+
+    def init(self) -> Memory:
+        ...
+
+    def validate(self, ref: Reference, val: Any) -> None:
+        ...
+
+    def dump(self, mem: Memory) -> dict[Reference, Any]:
+        ...
+
+    # TODO: make a expression translator, so operations can be: eval("A == 3") -> eval("m[2] == 3")
 
 
 @dataclass(frozen=True)
 class State:
     pos: tuple[int, ...]
-    val: Values
+    val: Memory
 
 
 @dataclass(frozen=True)
@@ -24,8 +42,8 @@ class StateView:
 
 
 Label = str
-Op = Callable[[Values], tuple[Label | None, Values]]
-ValuePredicate = Callable[[Values], bool]
+Op = Callable[[Memory], tuple[Label | None, Memory]]
+ValuePredicate = Callable[[Memory], bool]
 
 
 class Assertion(Protocol):
@@ -69,7 +87,7 @@ class Prog:
                     self.ops.append(op)
                     self.atomic.append(in_atomic_ctx)
 
-    def run(self, pos: int, vals: Values) -> tuple[int, Values, bool]:
+    def run(self, pos: int, vals: Memory) -> tuple[int, Memory, bool]:
         assert 0 <= pos < len(self.ops)
         lbl, vals = self.ops[pos](vals)
 

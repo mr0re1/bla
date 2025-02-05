@@ -2,9 +2,7 @@ import sys
 
 sys.path.insert(0, "../bla")
 
-from bla import Variables, proof
-
-D = Variables("Vars", ["A"])
+from bla import proof
 
 
 def setter_checker_non_atomic():
@@ -22,6 +20,8 @@ def setter_checker_atomic():
 def corrupter():
     A = False
 
+
+D = {"A": bool}
 
 print("*** Expected failure:")
 proof([setter_checker_non_atomic, corrupter], D)

@@ -1,11 +1,11 @@
 ----- step #0:
- def loop():     | _=False
+ def loop():     |
  ->  while True: |
          pass    |
 
 
 ----- step #1:
- def loop():     | _=False
+ def loop():     |
  ->  while True: |
          pass    |
 
