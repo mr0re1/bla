@@ -50,55 +50,6 @@ class FailedAssert(Exception):
     pass
 
 
-def mov(var: Variables, value: Any) -> Op:
-    def impl(mem: Values):
-        val = value  # to satisfy "match"
-        match val:
-            case Variables():  # A = B
-                val = mem[val]
-            case _:  # A = True
-                pass
-
-        nv = list(mem)
-        nv[var] = val
-        return None, tuple(nv)
-
-    return impl
-
-
-def cond(pred: ValuePredicate, lbl: str) -> Op:
-    def impl(val: Values):
-        return (lbl, val) if pred(val) else (None, val)
-
-    return impl
-
-
-def goto(lbl: str) -> Op:
-    def impl(val: Values):
-        return lbl, val
-
-    return impl
-
-
-def eq(var: Variables, value: Any) -> ValuePredicate:
-    def impl(mem: Values) -> bool:
-        val = value  # to satisfy "match"
-        match val:
-            case Variables():
-                val = mem[value]
-        return mem[var] == value
-
-    return impl
-
-
-def const(val: bool) -> ValuePredicate:
-    return lambda _: val
-
-
-def negate(pred: ValuePredicate) -> ValuePredicate:
-    return lambda val: not pred(val)
-
-
 class Sentinel(Enum):
     ATOMIC_ENTER = object()
     ATOMIC_EXIT = object()

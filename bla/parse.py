@@ -2,21 +2,8 @@ from typing import Callable, Any
 import ast, inspect
 from dataclasses import dataclass, field
 
-from bla.core import (
-    Prog,
-    Op,
-    Label,
-    Variables,
-    ValuePredicate,
-    eq,
-    const,
-    mov,
-    cond,
-    negate,
-    goto,
-    Sentinel,
-)
-from bla.asserts import assert_op
+from bla import ops
+from bla.core import Prog, Op, Label, Variables, ValuePredicate, Sentinel
 
 
 @dataclass
@@ -65,14 +52,14 @@ def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
     match expr:
         case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Constant(val)]):
             ctx.check_var_val(var, val)
-            return eq(ctx.var(var), val)
+            return ops.eq(ctx.var(var), val)
         case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Name(val)]):
-            return eq(ctx.check_var(var), ctx.check_var(val))
+            return ops.eq(ctx.check_var(var), ctx.check_var(val))
         case ast.Constant(val):
             assert val in [True, False], f"Invalid value {val}"
-            return const(val)
+            return ops.const(val)
         case ast.Name(var):
-            return eq(ctx.check_var(var), True)
+            return ops.eq(ctx.check_var(var), True)
         case _:
             raise Exception("Expected comparison, got", ast.unparse(expr))
 
@@ -81,9 +68,9 @@ def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     match t:
         case ast.Assign([ast.Name(var)], ast.Constant(val)):
             ctx.check_var_val(var, val)
-            ctx.add_stmt(mov(ctx.var(var), val), t)
+            ctx.add_stmt(ops.mov(ctx.var(var), val), t)
         case ast.Assign([ast.Name(var)], ast.Name(val)):
-            ctx.add_stmt(mov(ctx.check_var(var), ctx.check_var(val)), t)
+            ctx.add_stmt(ops.mov(ctx.check_var(var), ctx.check_var(val)), t)
         case _:
             raise ValueError("Expected assignment format:\n\t var = constant | var")
 
@@ -94,7 +81,7 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
 
     pred = _parse_val_predicate(t.test, ctx)
     else_lbl = ctx.uniq_label()
-    if_op = cond(negate(pred), else_lbl)
+    if_op = ops.cond(ops.negate(pred), else_lbl)
 
     ctx.add_stmt(if_op, t)
     _parse_body(t.body, ctx)
@@ -110,9 +97,9 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     end_lbl = ctx.uniq_label()
 
     ctx.add_stmt(begin_lbl, t)
-    ctx.add_stmt(cond(negate(pred), end_lbl), t)
+    ctx.add_stmt(ops.cond(ops.negate(pred), end_lbl), t)
     _parse_body(t.body, ctx)
-    ctx.add_stmt(goto(begin_lbl), t)
+    ctx.add_stmt(ops.goto(begin_lbl), t)
     ctx.add_stmt(end_lbl, t)
 
 
@@ -140,7 +127,7 @@ def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
 
 def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
     pred = _parse_val_predicate(t.test, ctx)
-    ctx.add_stmt(assert_op(pred, msg=ast.unparse(t)), t)
+    ctx.add_stmt(ops.assert_op(pred, msg=ast.unparse(t)), t)
 
 
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):

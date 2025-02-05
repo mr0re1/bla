@@ -1,4 +1,4 @@
-from bla.core import Assertion, FailedAssert, ValuePredicate, StateView, Values
+from bla.core import Assertion, FailedAssert, StateView
 
 
 class NeverCyclesAssert(Assertion):
@@ -8,12 +8,3 @@ class NeverCyclesAssert(Assertion):
 
 
 HALTS_ASSERT = NeverCyclesAssert()
-
-
-def assert_op(pred: ValuePredicate, msg: str):
-    def impl(val: Values):
-        if not pred(val):
-            raise FailedAssert(msg)
-        return None, val
-
-    return impl

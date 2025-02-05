@@ -8,9 +8,12 @@ def run_golden_test(script: str, update: bool) -> bool:
     name = path.splitext(path.basename(script))[0]
     print(f"{name}", end="")
     result = subprocess.run(
-        ["python", script], capture_output=True, text=True, check=True
+        ["python", script], capture_output=True, text=True, check=False
     )
     got = result.stdout + result.stderr
+    if result.returncode:
+        print(f" - FAILED with error:\n{got}")
+        exit(1)
 
     expectations_path = f"tests/golden/expectations/{name}.out"
     try:
