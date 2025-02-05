@@ -1,4 +1,7 @@
-# Dummy "TLA"
+# If TLA+ is too hard
+
+[TLA+](https://lamport.azurewebsites.net/tla/tla.html) is awesome but hard. <br>
+**bla** is small proofer that uses Python syntax.
 
 Declare set of programs that share a common memory but run on differnt clocks.
 Verify that assertions always hold true, no matter the order of execution.
@@ -6,8 +9,7 @@ Verify that assertions always hold true, no matter the order of execution.
 ```py
 # examples/inconsistency.py
 
-from bla.core import  Variables
-from bla.proof import proof
+from bla import Variables, proof
 
 # Declare domain - the set of variables used in the program
 D = Variables("Vars", ["A_set", "A_get"])
@@ -29,31 +31,26 @@ proof([client, server], D)
 ```
 
 ```sh
-$ python3 examples/inconsistency.py
+$ python examples/inconsistency.py
 ----- step #0:
  def client():            | def server():         | A_set=False
  ->  A_set = True         | ->  while True:       | A_get=False
      assert A_get == True |         A_get = A_set |
-
 
 ----- step #1:
  def client():            | def server():         | A_set=False
  ->  A_set = True         |     while True:       | A_get=False
      assert A_get == True | ->      A_get = A_set |
 
-
 ----- step #2:
  def client():            | def server():         | A_set=False
  ->  A_set = True         | ->  while True:       | A_get=False
      assert A_get == True |         A_get = A_set |
 
-
 ----- step #3:
  def client():            | def server():         | A_set=True
      A_set = True         | ->  while True:       | A_get=False
-     assert A_get == True |         A_get = A_set |
- ->==HALTED==             |                       |
+ ->  assert A_get == True |         A_get = A_set |
 
-
-Assertion failed: client:1: assert A_get == True
+Assertion failed: assert A_get == True
 ```
