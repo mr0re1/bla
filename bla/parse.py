@@ -12,7 +12,7 @@ class _ParseCtx:
     src: str
     domain: type[Variables]
     line_offset: int
-    stmts: list[Op | Label] = field(default_factory=list)
+    stmts: list[Op | Label | Sentinel] = field(default_factory=list)
     line_mapping: list[int] = field(
         default_factory=list
     )  # maps from state.pos to src line

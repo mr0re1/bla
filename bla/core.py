@@ -1,5 +1,5 @@
 from enum import IntEnum, Enum
-from typing import Callable, Any
+from typing import Callable, Protocol
 from dataclasses import dataclass
 
 
@@ -22,28 +22,15 @@ class StateView:
     state: State
     progs: list["Prog"]
 
-    def prog_idx(self, name) -> int:
-        for i, p in enumerate(self.progs):
-            if p.name == name:
-                return i
-        raise KeyError(f"Program {name} not found")
-
-    def pos(self, name) -> int:
-        pi = self.prog_idx(name)
-        return self.state.pos[pi]
-
-    def val(self, var: Variables) -> bool:
-        return self.state.val[var]
-
 
 Label = str
 Op = Callable[[Values], tuple[Label | None, Values]]
 ValuePredicate = Callable[[Values], bool]
 
 
-class Assertion:
+class Assertion(Protocol):
     def check(self, state: StateView, cyclic: bool) -> None:
-        raise NotImplementedError()
+        ...
 
 
 class FailedAssert(Exception):

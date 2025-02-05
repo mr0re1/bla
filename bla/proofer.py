@@ -63,9 +63,9 @@ def proof(
             )
 
             if nxt in visited:  # Detected cycle
-                if e := _run_asserts(assertions, sv, cyclic=True):
+                if fa := _run_asserts(assertions, sv, cyclic=True):
                     explain(sv, domain, visited)
-                    print(f"Assertion failed: {e}")
+                    print(f"Assertion failed: {fa}")
                     return False
                 continue
 

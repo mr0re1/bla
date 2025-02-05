@@ -20,6 +20,13 @@ repos:
     types: [python]
     pass_filenames: false
 
+  - id: mypy
+    name: mypy
+    entry: mypy bla
+    language: system
+    types: [python]
+    pass_filenames: false
+
 - repo: https://github.com/codespell-project/codespell
   rev: v2.2.4
   hooks:
