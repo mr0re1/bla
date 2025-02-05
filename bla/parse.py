@@ -19,6 +19,9 @@ class _ParseCtx:
     _nxt_label: int = 0
     _atomic_context: bool = False
 
+    _break_lbls: list[Label] = field(default_factory=list)
+    _continue_lbls: list[Label] = field(default_factory=list)
+
     def check_var(self, var: str) -> Variables:
         assert var in self.domain.__members__, f"Unknown variable {var}"
         return self.domain[var]
@@ -76,31 +79,50 @@ def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
 
 
 def _parse_if(t: ast.If, ctx: _ParseCtx):
-    if t.orelse:
-        raise NotImplementedError("Else clause is not supported yet")
+    # There are two cases:
+    # `if: ...` - requires one label (else == end) and one cond-goto
+    # `if: ... else: ...` - requires two labels (else != end), one cond-goto, and one goto
 
-    pred = _parse_val_predicate(t.test, ctx)
     else_lbl = ctx.uniq_label()
+    pred = _parse_val_predicate(t.test, ctx)
     if_op = ops.cond(ops.negate(pred), else_lbl)
-
+    
     ctx.add_stmt(if_op, t)
     _parse_body(t.body, ctx)
-    ctx.add_stmt(else_lbl, t)
+
+    if t.orelse: # if: ... else: ...
+        end_lbl = ctx.uniq_label()
+        ctx.add_stmt(ops.goto(end_lbl), t) # TODO: there is a beter node to point to
+
+        ctx.add_stmt(else_lbl, t.orelse[0])
+        _parse_body(t.orelse, ctx)
+
+    else: # if: ...
+        end_lbl = else_lbl
+
+    ctx.add_stmt(end_lbl, t)
 
 
 def _parse_while(t: ast.While, ctx: _ParseCtx):
-    if t.orelse:
-        raise NotImplementedError("Else clause is not supported yet")
+    assert not t.orelse, "else-clause in while-loop is not supported"
 
     pred = _parse_val_predicate(t.test, ctx)
+    
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
-
+    
     ctx.add_stmt(begin_lbl, t)
     ctx.add_stmt(ops.cond(ops.negate(pred), end_lbl), t)
+
+    ctx._continue_lbls.append(begin_lbl)
+    ctx._break_lbls.append(end_lbl)
+
     _parse_body(t.body, ctx)
     ctx.add_stmt(ops.goto(begin_lbl), t)
     ctx.add_stmt(end_lbl, t)
+
+    ctx._break_lbls.pop()
+    ctx._continue_lbls.pop()
 
 
 def _parse_with(t: ast.With, ctx: _ParseCtx):
@@ -130,6 +152,15 @@ def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
     ctx.add_stmt(ops.assert_op(pred, msg=ast.unparse(t)), t)
 
 
+def _parse_break(t: ast.Break, ctx: _ParseCtx):
+    assert ctx._break_lbls, "brake outside of a loop"
+    ctx.add_stmt(ops.goto(ctx._break_lbls[-1]), t)
+
+def _parse_continue(t: ast.Continue, ctx: _ParseCtx):
+    assert ctx._continue_lbls, "continue outside of a loop"
+    ctx.add_stmt(ops.goto(ctx._continue_lbls[-1]), t)
+
+
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
     match t:
         case ast.Assert():
@@ -144,6 +175,10 @@ def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
             _parse_with(t, ctx)
         case ast.Pass():
             pass  # don't add anything to prog
+        case ast.Break():
+            _parse_break(t, ctx)
+        case ast.Continue():
+            _parse_continue(t, ctx)
 
         case _:
             raise Exception("Unknown op", ast.unparse(t))
