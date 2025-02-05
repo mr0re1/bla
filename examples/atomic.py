@@ -23,7 +23,7 @@ def corrupter():
     A = False
 
 
-print("*** Expectef failure:")
+print("*** Expected failure:")
 proof([setter_checker_non_atomic, corrupter], D)
 
 print("*** Passes")

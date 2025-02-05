@@ -1,4 +1,4 @@
-*** Expectef failure:
+*** Expected failure:
 ----- step #0:
  def setter_checker_non_atomic(): | def corrupter(): | A=False
  ->  A = True                     | ->  A = False    |

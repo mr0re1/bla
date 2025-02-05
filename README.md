@@ -3,7 +3,7 @@
 [TLA+](https://lamport.azurewebsites.net/tla/tla.html) is awesome but hard. <br>
 **bla** is small proofer that uses Python syntax.
 
-Declare set of programs that share a common memory but run on differnt clocks.
+Declare set of programs that share a common memory but run on different clocks.
 Verify that assertions always hold true, no matter the order of execution.
 
 ```py
