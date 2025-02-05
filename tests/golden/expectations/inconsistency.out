@@ -19,8 +19,7 @@
 ----- step #3:
  def client():            | def server():         | A_set=True
      A_set = True         | ->  while True:       | A_get=False
-     assert A_get == True |         A_get = A_set |
- ->==HALTED==             |                       |
+ ->  assert A_get == True |         A_get = A_set |
 
 
-Assertion failed: client:1: assert A_get == True
+Assertion failed: assert A_get == True

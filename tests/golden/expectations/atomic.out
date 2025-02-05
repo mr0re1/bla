@@ -8,16 +8,14 @@
 ----- step #1:
  def setter_checker_non_atomic(): | def corrupter(): | A=True
      A = True                     | ->  A = False    |
-     assert A == True             |                  |
- ->==HALTED==                     |                  |
+ ->  assert A == True             |                  |
 
 
 ----- step #2:
  def setter_checker_non_atomic(): | def corrupter(): | A=False
      A = True                     |     A = False    |
-     assert A == True             | ->==HALTED==     |
- ->==HALTED==                     |                  |
+ ->  assert A == True             | ->==HALTED==     |
 
 
-Assertion failed: setter_checker_non_atomic:1: assert A == True
+Assertion failed: assert A == True
 *** Passes

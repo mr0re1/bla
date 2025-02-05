@@ -12,12 +12,11 @@ from bla.core import (
     const,
     mov,
     cond,
-    Assertion,
     negate,
     goto,
     Sentinel,
 )
-from bla.asserts import PosAssert
+from bla.asserts import assert_op
 
 
 @dataclass
@@ -30,7 +29,6 @@ class _ParseCtx:
     line_mapping: list[int] = field(
         default_factory=list
     )  # maps from state.pos to src line
-    asserts: list[Assertion] = field(default_factory=list)
     _nxt_label: int = 0
     _atomic_context: bool = False
 
@@ -52,13 +50,11 @@ class _ParseCtx:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
 
-    def add_stmt(self, stmt: Op | Label | Assertion | Sentinel, node: ast.AST) -> None:
+    def add_stmt(self, stmt: Op | Label | Sentinel, node: ast.AST) -> None:
         match stmt:
             case Label() | Sentinel():
                 self.stmts.append(stmt)  # Go to program but not getting line mapping
                 # TODO: don't leak this detail of Prog impplelemtation
-            case Assertion():
-                self.asserts.append(stmt)
             case _ as op:
                 assert callable(op)
                 self.stmts.append(op)
@@ -142,8 +138,15 @@ def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
     ctx._atomic_context = False
 
 
+def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
+    pred = _parse_val_predicate(t.test, ctx)
+    ctx.add_stmt(assert_op(pred, msg=ast.unparse(t)), t)
+
+
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
     match t:
+        case ast.Assert():
+            _parse_assert(t, ctx)
         case ast.Assign():
             _parse_assign(t, ctx)
         case ast.If():
@@ -154,15 +157,6 @@ def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
             _parse_with(t, ctx)
         case ast.Pass():
             pass  # don't add anything to prog
-
-        case ast.Assert(tst):
-            pred = _parse_val_predicate(tst, ctx)
-            ctx.add_stmt(
-                PosAssert(
-                    pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t)
-                ),
-                t,
-            )
 
         case _:
             raise Exception("Unknown op", ast.unparse(t))
@@ -178,7 +172,7 @@ def _check_empty_args(args: ast.arguments) -> None:
         raise Exception(f"Expected no arguments, got {args.__dict__}")
 
 
-def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Assertion]]:
+def parse_program(f: Callable, domain: type[Variables]) -> Prog:
     src = inspect.getsource(f)
     t = ast.parse(src)
     match t.body:
@@ -194,7 +188,7 @@ def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Asse
 
         case _:
             raise Exception("Expected a single function, got", t.body)
-    return PrettyProg(ctx), ctx.asserts
+    return PrettyProg(ctx)
 
 
 class PrettyProg(Prog):

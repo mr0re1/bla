@@ -25,9 +25,7 @@ def proof(
         assertions = []
     progs = []
     for fn in fns:
-        prog, asserts = parse_program(fn, domain)
-        progs.append(prog)
-        assertions += asserts
+        progs.append(parse_program(fn, domain))
 
     state = State(pos=tuple([0] * len(progs)), val=tuple([False] * len(domain)))
 
@@ -52,7 +50,14 @@ def proof(
             pos = state.pos[ip]
             if pos >= len(prog.ops):
                 continue
-            npos, nv, atomic = prog.run(pos, state.val)
+
+            try:
+                npos, nv, atomic = prog.run(pos, state.val)
+            except FailedAssert as e:  # TODO: refactor proof
+                explain(sv, domain, visited)
+                print(f"Assertion failed: {e}")
+                return False
+
             nxt = State(
                 pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip + 1 :]), val=nv
             )

@@ -68,7 +68,7 @@ def mov(var: Variables, value: Any) -> Op:
 
 def cond(pred: ValuePredicate, lbl: str) -> Op:
     def impl(val: Values):
-        return lbl if pred(val) else None, val
+        return (lbl, val) if pred(val) else (None, val)
 
     return impl
 
