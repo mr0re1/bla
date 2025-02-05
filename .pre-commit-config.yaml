@@ -1,20 +1,26 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
-    hooks:
-    -   id: check-yaml
-    -   id: end-of-file-fixer
-    -   id: trailing-whitespace
--   repo: https://github.com/psf/black
-    rev: 22.10.0
-    hooks:
-    -   id: black
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v2.3.0
+  hooks:
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
 
--   repo: local
-    hooks:
-    - id: golden
-      name: golden
-      entry: python tests/golden/run_tests.py --update
-      language: system
-      types: [python]
-      pass_filenames: false
+- repo: https://github.com/psf/black
+  rev: 22.10.0
+  hooks:
+  - id: black
+
+- repo: local
+  hooks:
+  - id: golden
+    name: golden
+    entry: python tests/golden/run_tests.py --update
+    language: system
+    types: [python]
+    pass_filenames: false
+
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.2.4
+  hooks:
+  - id: codespell
