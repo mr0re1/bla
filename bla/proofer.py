@@ -31,10 +31,11 @@ def proof(
 
     state = State(pos=tuple([0] * len(progs)), val=tuple([False] * len(domain)))
 
-    stack = [state]
+    # Stack stores pairs (state, programs_to_run_from_this_state_or_all)
+    stack: list[tuple[State, list[int] | None]] = [(state, None)]
     visited: dict[State, State | None] = {state: None}
     while stack:
-        state = stack.pop()
+        state, nxt_progs = stack.pop()
         sv = StateView(state, progs)
 
         if e := _run_asserts(assertions, sv, cyclic=False):
@@ -42,11 +43,16 @@ def proof(
             print(f"Assertion failed: {e}")
             return False
 
-        for ip, prog in enumerate(progs):
+        if nxt_progs is None:
+            nxt_progs = list(range(len(progs)))
+
+        for ip in nxt_progs:
+            prog = progs[ip]
+
             pos = state.pos[ip]
             if pos >= len(prog.ops):
                 continue
-            npos, nv = prog.run(pos, state.val)
+            npos, nv, atomic = prog.run(pos, state.val)
             nxt = State(
                 pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip + 1 :]), val=nv
             )
@@ -58,7 +64,9 @@ def proof(
                     return False
                 continue
 
-            stack.append(nxt)
+            nxt_progs = None if not atomic else [ip]
+
+            stack.append((nxt, nxt_progs))
             visited[nxt] = state
 
     return True

@@ -1,6 +1,6 @@
 from typing import Callable, Any
 import ast, inspect
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from bla.core import (
     Prog,
@@ -15,6 +15,7 @@ from bla.core import (
     Assertion,
     negate,
     goto,
+    Sentinel,
 )
 from bla.asserts import PosAssert
 
@@ -25,10 +26,13 @@ class _ParseCtx:
     src: str
     domain: type[Variables]
     line_offset: int
-    ops: list[Op | Label]
-    line_mapping: list[int]  # maps from state.pos to src line
-    asserts: list[Assertion]
+    stmts: list[Op | Label] = field(default_factory=list)
+    line_mapping: list[int] = field(
+        default_factory=list
+    )  # maps from state.pos to src line
+    asserts: list[Assertion] = field(default_factory=list)
     _nxt_label: int = 0
+    _atomic_context: bool = False
 
     def check_var(self, var: str) -> Variables:
         assert var in self.domain.__members__, f"Unknown variable {var}"
@@ -48,14 +52,16 @@ class _ParseCtx:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
 
-    def add_op(self, op: Op | Label | Assertion, node: ast.AST) -> None:
-        match op:
-            case Label():
-                self.ops.append(op)  # labels also added to ops
+    def add_stmt(self, stmt: Op | Label | Assertion | Sentinel, node: ast.AST) -> None:
+        match stmt:
+            case Label() | Sentinel():
+                self.stmts.append(stmt)  # Go to program but not getting line mapping
+                # TODO: don't leak this detail of Prog impplelemtation
             case Assertion():
-                self.asserts.append(op)
-            case _:  # Op; TODO: better check
-                self.ops.append(op)
+                self.asserts.append(stmt)
+            case _ as op:
+                assert callable(op)
+                self.stmts.append(op)
                 self.line_mapping.append(self.lineno(node))
 
 
@@ -79,9 +85,9 @@ def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     match t:
         case ast.Assign([ast.Name(var)], ast.Constant(val)):
             ctx.check_var_val(var, val)
-            ctx.add_op(mov(ctx.var(var), val), t)
+            ctx.add_stmt(mov(ctx.var(var), val), t)
         case ast.Assign([ast.Name(var)], ast.Name(val)):
-            ctx.add_op(mov(ctx.check_var(var), ctx.check_var(val)), t)
+            ctx.add_stmt(mov(ctx.check_var(var), ctx.check_var(val)), t)
         case _:
             raise ValueError("Expected assignment format:\n\t var = constant | var")
 
@@ -94,9 +100,9 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
     else_lbl = ctx.uniq_label()
     if_op = cond(negate(pred), else_lbl)
 
-    ctx.add_op(if_op, t)
+    ctx.add_stmt(if_op, t)
     _parse_body(t.body, ctx)
-    ctx.add_op(else_lbl, t)
+    ctx.add_stmt(else_lbl, t)
 
 
 def _parse_while(t: ast.While, ctx: _ParseCtx):
@@ -107,11 +113,33 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
 
-    ctx.add_op(begin_lbl, t)
-    ctx.add_op(cond(negate(pred), end_lbl), t)
+    ctx.add_stmt(begin_lbl, t)
+    ctx.add_stmt(cond(negate(pred), end_lbl), t)
     _parse_body(t.body, ctx)
-    ctx.add_op(goto(begin_lbl), t)
-    ctx.add_op(end_lbl, t)
+    ctx.add_stmt(goto(begin_lbl), t)
+    ctx.add_stmt(end_lbl, t)
+
+
+def _parse_with(t: ast.With, ctx: _ParseCtx):
+    assert t.type_comment is None, "Type comments are not supported"
+    assert len(t.items) == 1, "Only one item is supported"
+    it = t.items[0]
+    assert it.optional_vars is None, "Optional vars are not supported"
+    match it.context_expr:
+        case ast.Name("atomic"):
+            _parse_atomic_context(t.body, ctx)
+        case _:
+            raise Exception("Unsupported context, only 'atomic' is supported")
+
+
+def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
+    assert not ctx._atomic_context, "Nested atomic context is not supported"
+
+    ctx._atomic_context = True
+    ctx.add_stmt(Sentinel.ATOMIC_ENTER, body[0])
+    _parse_body(body, ctx)
+    ctx.add_stmt(Sentinel.ATOMIC_EXIT, body[0])
+    ctx._atomic_context = False
 
 
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
@@ -122,16 +150,14 @@ def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
             _parse_if(t, ctx)
         case ast.While():
             _parse_while(t, ctx)
+        case ast.With():
+            _parse_with(t, ctx)
         case ast.Pass():
             pass  # don't add anything to prog
 
-        # TODO: reconsider support for labels
-        # case ast.Expr(ast.Constant(lbl)) if isinstance(lbl, str):
-        #     ctx.add_op(lbl, t)
-
         case ast.Assert(tst):
             pred = _parse_val_predicate(tst, ctx)
-            ctx.add_op(
+            ctx.add_stmt(
                 PosAssert(
                     pred, ctx.prog_name, len(ctx.line_mapping), msg=ast.unparse(t)
                 ),
@@ -163,10 +189,6 @@ def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Asse
                 src=src,
                 domain=domain,
                 line_offset=t.body[0].lineno,
-                # TODO: use default vals
-                ops=[],
-                line_mapping=[],
-                asserts=[],
             )
             _parse_body(body, ctx)
 
@@ -177,7 +199,7 @@ def parse_program(f: Callable, domain: type[Variables]) -> tuple[Prog, list[Asse
 
 class PrettyProg(Prog):
     def __init__(self, ctx: _ParseCtx):
-        super().__init__(ctx.prog_name, ctx.ops)
+        super().__init__(ctx.prog_name, ctx.stmts)
         self.ctx = ctx
 
     def render(self, pos) -> Label:
