@@ -33,14 +33,14 @@ class _ParseCtx:
     def var(self, name: str) -> Variables:
         return self.check_var(name)
 
-    def lineno(self, node: ast.AST) -> int:
+    def lineno(self, node: ast.stmt) -> int:
         return node.lineno - self.line_offset
 
     def uniq_label(self) -> str:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
 
-    def add_stmt(self, stmt: Op | Label | Sentinel, node: ast.AST) -> None:
+    def add_stmt(self, stmt: Op | Label | Sentinel, node: ast.stmt) -> None:
         match stmt:
             case Label() | Sentinel():
                 self.stmts.append(stmt)  # Go to program but not getting line mapping
@@ -86,18 +86,18 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
     else_lbl = ctx.uniq_label()
     pred = _parse_val_predicate(t.test, ctx)
     if_op = ops.cond(ops.negate(pred), else_lbl)
-    
+
     ctx.add_stmt(if_op, t)
     _parse_body(t.body, ctx)
 
-    if t.orelse: # if: ... else: ...
+    if t.orelse:  # if: ... else: ...
         end_lbl = ctx.uniq_label()
-        ctx.add_stmt(ops.goto(end_lbl), t) # TODO: there is a beter node to point to
+        ctx.add_stmt(ops.goto(end_lbl), t.body[-1])
 
         ctx.add_stmt(else_lbl, t.orelse[0])
         _parse_body(t.orelse, ctx)
 
-    else: # if: ...
+    else:  # if: ...
         end_lbl = else_lbl
 
     ctx.add_stmt(end_lbl, t)
@@ -107,10 +107,10 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     assert not t.orelse, "else-clause in while-loop is not supported"
 
     pred = _parse_val_predicate(t.test, ctx)
-    
+
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
-    
+
     ctx.add_stmt(begin_lbl, t)
     ctx.add_stmt(ops.cond(ops.negate(pred), end_lbl), t)
 
@@ -155,6 +155,7 @@ def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
 def _parse_break(t: ast.Break, ctx: _ParseCtx):
     assert ctx._break_lbls, "brake outside of a loop"
     ctx.add_stmt(ops.goto(ctx._break_lbls[-1]), t)
+
 
 def _parse_continue(t: ast.Continue, ctx: _ParseCtx):
     assert ctx._continue_lbls, "continue outside of a loop"
