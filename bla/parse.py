@@ -78,7 +78,7 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
 
     else_lbl = ctx.uniq_label()
     pred = _parse_predicate(t.test, ctx)
-    if_op = ops.cond(ops.negate(pred), else_lbl)
+    if_op = ops.cond(pred, else_lbl, negate=True)
 
     ctx.add_stmt(if_op, t)
     _parse_body(t.body, ctx)
@@ -105,7 +105,7 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     end_lbl = ctx.uniq_label()
 
     ctx.add_stmt(begin_lbl, t)
-    ctx.add_stmt(ops.cond(ops.negate(pred), end_lbl), t)
+    ctx.add_stmt(ops.cond(pred, end_lbl, negate=True), t)
 
     ctx._continue_lbls.append(begin_lbl)
     ctx._break_lbls.append(end_lbl)

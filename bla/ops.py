@@ -22,9 +22,11 @@ def mov(mm: MemMap, var: Reference, expr: Expr) -> Op:
     return impl
 
 
-def cond(pred: Predicate, lbl: str) -> Op:
+def cond(pred: Predicate, lbl: str, negate: bool) -> Op:
+    dst = (lbl, None) if negate else (None, lbl)
+
     def impl(val: Memory):
-        return (lbl, val) if pred(val) else (None, val)
+        return (dst[pred(val)], val)
 
     return impl
 
@@ -43,11 +45,6 @@ def assert_op(pred: Predicate, msg: str):
         return None, val
 
     return impl
-
-
-def negate(pred: Predicate) -> Predicate:
-    compile
-    return lambda val: not pred(val)
 
 
 class DereferencerNodeTransformer(ast.NodeTransformer):
