@@ -16,7 +16,11 @@ def mov(mm: MemMap, var: Reference, expr: Expr) -> Op:
     daddr = mm.addr(var)
 
     def impl(mem: Memory):
-        # TODO: run type checking
+        val = expr(mem)
+        try:
+            mm.validate(var, val)
+        except AssertionError as e: # TODO: don't rethrow, make MM to throw correct type
+            raise FailedAssert(str(e))
         return None, _assign_mem(mem, daddr, expr(mem))
 
     return impl
