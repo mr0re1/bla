@@ -2,20 +2,20 @@
 ----- step #0:
  def setter_checker_non_atomic(): | def corrupter(): | A=False
  ->  A = True                     | ->  A = False    |
-     assert A == True             |                  |
+     assert A                     |                  |
 
 
 ----- step #1:
  def setter_checker_non_atomic(): | def corrupter(): | A=True
      A = True                     | ->  A = False    |
- ->  assert A == True             |                  |
+ ->  assert A                     |                  |
 
 
 ----- step #2:
  def setter_checker_non_atomic(): | def corrupter(): | A=False
      A = True                     |     A = False    |
- ->  assert A == True             | ->==HALTED==     |
+ ->  assert A                     | ->==HALTED==     |
 
 
-Assertion failed: assert A == True
+Assertion failed: assert A
 *** Passes

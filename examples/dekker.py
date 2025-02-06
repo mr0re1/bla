@@ -5,13 +5,12 @@ sys.path.insert(0, "../bla")
 
 
 from bla import proof
-from bla.asserts import HALTS_ASSERT
 
 D = {
     "wants_to_enter_0": False,
     "wants_to_enter_1": False,
     "turn": False,
-    "critical_section": False,
+    "critical_section_used": False,
 }
 
 
@@ -25,9 +24,9 @@ def p0():
             wants_to_enter_0 = True
 
     # critical section
-    assert critical_section == False
-    critical_section = True
-    critical_section = False
+    assert not critical_section_used
+    critical_section_used = True
+    critical_section_used = False
     # releasing critical section
     turn = True
     wants_to_enter_0 = False
@@ -43,9 +42,9 @@ def p1():
             wants_to_enter_1 = True
 
     # critical section
-    assert critical_section == False
-    critical_section = True
-    critical_section = False
+    assert not critical_section_used
+    critical_section_used = True
+    critical_section_used = False
     # releasing critical section
     turn = False
     wants_to_enter_1 = False
@@ -61,9 +60,9 @@ def p1_brute():
     wants_to_enter_1 = True
 
     # critical section
-    assert critical_section == False
-    critical_section = True
-    critical_section = False
+    assert not critical_section_used
+    critical_section_used = True
+    critical_section_used = False
     # releasing critical section
     turn = False
     wants_to_enter_1 = False
@@ -71,22 +70,22 @@ def p1_brute():
 
 proof([p0, p1_brute], D)
 """
-...
-def p0():                            | def p1_brute():                      | wants_to_enter_0=True
+ def p0():                            | def p1_brute():                      | wants_to_enter_0=True
      wants_to_enter_0 = True          |     wants_to_enter_1 = True          | wants_to_enter_1=True
-     while wants_to_enter_1 == True:  |                                      | turn=False
-       if turn == True:               |     # critical section               | critical_section=True
-          wants_to_enter_0 = False    |     assert critical_section == False |
-          while turn == True:         |     critical_section = True          |
-             pass # busy wait         | ->  critical_section = False         |
-          wants_to_enter_0 = True     |     # releasing critical section     |
+     while wants_to_enter_1:          |                                      | turn=False
+         if turn == True:             |     # critical section               | critical_section_used=True
+             wants_to_enter_0 = False |     assert not critical_section_used |
+             while turn == True:      |     critical_section_used = True     |
+                 pass  # busy wait    | ->  critical_section_used = False    |
+             wants_to_enter_0 = True  |     # releasing critical section     |
                                       |     turn = False                     |
      # critical section               |     wants_to_enter_1 = False         |
-     assert critical_section == False |                                      |
- ->  critical_section = True          |                                      |
-     critical_section = False         |                                      |
+ ->  assert not critical_section_used |                                      |
+     critical_section_used = True     |                                      |
+     critical_section_used = False    |                                      |
      # releasing critical section     |                                      |
      turn = True                      |                                      |
      wants_to_enter_0 = False         |                                      |
-Assertion failed: p0:8: assert critical_section == False
+
+Assertion failed: assert not critical_section_used
 """

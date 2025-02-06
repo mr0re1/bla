@@ -7,14 +7,13 @@ from bla import proof
 
 def setter_checker_non_atomic():
     A = True
-    assert A == True
+    assert A
 
 
 def setter_checker_atomic():
     with atomic:
         A = True
-        assert A == True
-        A = False  # Can be removed once positional assert are fixed
+        assert A
 
 
 def corrupter():

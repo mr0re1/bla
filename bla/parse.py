@@ -3,8 +3,8 @@ import ast, inspect
 from dataclasses import dataclass, field
 
 from bla import ops
-from bla.memory import MemMap, Reference
-from bla.core import Prog, Op, Label, ValuePredicate, Sentinel
+from bla.memory import MemMap, Reference, Memory
+from bla.core import Prog, Op, Label, Predicate, Sentinel
 
 
 @dataclass
@@ -46,29 +46,29 @@ class _ParseCtx:
                 self.line_mapping.append(self.lineno(node))
 
 
-def _parse_val_predicate(expr: ast.expr, ctx: _ParseCtx) -> ValuePredicate:
-    match expr:
-        case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Constant(val)]):
-            return ops.eq(ctx.mm, ctx.ref(var), val)
-        case ast.Compare(ast.Name(var), [ast.Eq()], [ast.Name(val)]):
-            return ops.eq(ctx.mm, ctx.ref(var), ctx.ref(val))
-        case ast.Constant(val):
-            assert val in [True, False], f"Invalid value {val}"
-            return ops.const(val)
-        case ast.Name(var):
-            return ops.eq(ctx.mm, ctx.ref(var), True)
-        case _:
-            raise Exception("Expected comparison, got", ast.unparse(expr))
+def _parse_predicate(t: ast.expr, ctx: _ParseCtx) -> Predicate:
+    # TODO: use shorthand for `const` and `A`
+    #  to avoid costly(?) expressions eval
+    expr = ops.EvalExpr.from_ast(t, ctx.mm)
+
+    def pred(mem: Memory) -> bool:  # TODO: move somewhere
+        val = expr(mem)
+        assert isinstance(val, bool)
+        return val
+
+    return pred
 
 
 def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
-    match t:
-        case ast.Assign([ast.Name(var)], ast.Constant(val)):
-            ctx.add_stmt(ops.mov(ctx.mm, ctx.ref(var), val), t)
-        case ast.Assign([ast.Name(var)], ast.Name(val)):
-            ctx.add_stmt(ops.mov(ctx.mm, ctx.ref(var), ctx.ref(val)), t)
-        case _:
-            raise ValueError("Expected assignment format:\n\t var = constant | var")
+    assert len(t.targets) == 1, "Tuple assignment is not supported"
+    tgt = t.targets[0]
+    assert isinstance(tgt, ast.Name), "Only assignment by name is supported"
+
+    ref = ctx.ref(tgt.id)
+    # TODO: use shorthand for `A = const` and `A = B`
+    #  to avoid costly(?) expressions eval
+    expr = ops.EvalExpr.from_ast(t.value, ctx.mm)
+    ctx.add_stmt(ops.mov(ctx.mm, ref, expr), t)
 
 
 def _parse_if(t: ast.If, ctx: _ParseCtx):
@@ -77,7 +77,7 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
     # `if: ... else: ...` - requires two labels (else != end), one cond-goto, and one goto
 
     else_lbl = ctx.uniq_label()
-    pred = _parse_val_predicate(t.test, ctx)
+    pred = _parse_predicate(t.test, ctx)
     if_op = ops.cond(ops.negate(pred), else_lbl)
 
     ctx.add_stmt(if_op, t)
@@ -99,7 +99,7 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
 def _parse_while(t: ast.While, ctx: _ParseCtx):
     assert not t.orelse, "else-clause in while-loop is not supported"
 
-    pred = _parse_val_predicate(t.test, ctx)
+    pred = _parse_predicate(t.test, ctx)
 
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
@@ -141,8 +141,9 @@ def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
 
 
 def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
-    pred = _parse_val_predicate(t.test, ctx)
-    ctx.add_stmt(ops.assert_op(pred, msg=ast.unparse(t)), t)
+    msg = ast.unparse(t)
+    pred = _parse_predicate(t.test, ctx)
+    ctx.add_stmt(ops.assert_op(pred, msg=msg), t)
 
 
 def _parse_break(t: ast.Break, ctx: _ParseCtx):

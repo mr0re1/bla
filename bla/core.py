@@ -18,7 +18,8 @@ class StateView:
 
 Label = str
 Op = Callable[[Memory], tuple[Label | None, Memory]]
-ValuePredicate = Callable[[Memory], bool]
+Expr = Callable[[Memory], Any]
+Predicate = Callable[[Memory], bool]
 
 
 class Assertion(Protocol):
