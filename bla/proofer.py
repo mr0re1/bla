@@ -1,6 +1,6 @@
 from typing import Callable
 
-from bla.memory import MemMap
+from bla.memory import MemMap, make_mem_map
 from bla.core import Assertion, State, StateView, FailedAssert
 from bla.parse import parse_program
 from tabulate import tabulate
@@ -25,7 +25,7 @@ def proof(
     if assertions is None:
         assertions = []
 
-    mm = MemMap(domain)
+    mm = make_mem_map(domain)
 
     progs = []
     for fn in fns:
