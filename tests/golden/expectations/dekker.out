@@ -1,3 +1,4 @@
+No assertions failed
 ----- step #0:
  def p0():                            | def p1_brute():                      | wants_to_enter_0=False
  ->  wants_to_enter_0 = True          | ->  wants_to_enter_1 = True          | wants_to_enter_1=False

@@ -1,35 +1,30 @@
-from typing import Callable
-
-from bla.memory import MemMap, make_mem_map
+from bla.memory import MemMap
 from bla.core import State, FailedAssert, Prog
-from bla.parse import parse_program
-from tabulate import tabulate
 from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class _RunFailure:
+class RunFailure:
     state: State
     prog_idx: int
     error: FailedAssert
 
 
 @dataclass
-class _ProofCtx:
+class ProofCtx:
     progs: list[Prog]
     mm: MemMap
     parent: dict[State, State | None] = field(default_factory=dict)
-    failure: _RunFailure | None = None
+    failure: RunFailure | None = None
 
 
-def _run(ctx: _ProofCtx, init_state: State) -> bool:
+def _run(ctx: ProofCtx, init_state: State):
     """
     Runs until either all possible state transitions are exhausted of assert failure occurs.
-    Returns True if exhausted, False if assertion failed.
     Affects ctx.
     """
     if init_state in ctx.parent:
-        return True
+        return
 
     ctx.parent[init_state] = None
     # NOTES: Assumes that init_state is not in atomic context.
@@ -51,8 +46,8 @@ def _run(ctx: _ProofCtx, init_state: State) -> bool:
             try:
                 npos, nv, atomic = prog.run(pos, state.val)
             except FailedAssert as fa:
-                ctx.failure = _RunFailure(state, ip, fa)
-                return False
+                ctx.failure = RunFailure(state, ip, fa)
+                return
 
             nxt_state = State(
                 pos=tuple(state.pos[:ip] + (npos,) + state.pos[ip + 1 :]), val=nv
@@ -65,41 +60,11 @@ def _run(ctx: _ProofCtx, init_state: State) -> bool:
 
             stack.append((nxt_state, nxt_progs))
             ctx.parent[nxt_state] = state
-    return True
+    return
 
 
-def proof(
-    fns: list[Callable],
-    domain: dict[str, type],
-) -> bool:
-    mm = make_mem_map(domain)
-    progs = [parse_program(fn, mm) for fn in fns]
-    ctx = _ProofCtx(progs=progs, mm=mm)
+def run_proof(progs: list[Prog], mm: MemMap) -> ProofCtx:
+    ctx = ProofCtx(progs=progs, mm=mm)
     init_state = State(pos=tuple([0] * len(ctx.progs)), val=ctx.mm.init())
-
-    if _run(ctx, init_state):
-        return True
-
-    explain(ctx)
-    return False
-
-
-def explain(ctx: _ProofCtx):
-    assert ctx.failure
-
-    chain = []
-    state: State | None = ctx.failure.state
-    while state is not None:
-        chain.append(state)
-        state = ctx.parent.get(state)
-
-    for i, state in enumerate(reversed(chain)):
-        print(f"----- step #{i}:")
-
-        pgs = [ctx.progs[pi].render(pos) for pi, pos in enumerate(state.pos)]
-        vls = "\n".join([f"{ref}={val}" for ref, val in ctx.mm.dump(state.val).items()])
-        tbl = [pgs + [vls]]
-        print(tabulate(tbl, tablefmt="presto"))
-        print("\n")
-
-    print(f"Assertion failed: {ctx.failure.error}")
+    _run(ctx, init_state)
+    return ctx

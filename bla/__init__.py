@@ -1,1 +1,1 @@
-from bla.proofer import proof
+from bla.ux import proof, LongStacktrace
