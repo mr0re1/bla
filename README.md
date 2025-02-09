@@ -9,10 +9,7 @@ Verify that assertions always hold true, no matter the order of execution.
 ```py
 # examples/inconsistency.py
 
-from bla import Variables, proof
-
-# Declare domain - the set of variables used in the program
-D = Variables("Vars", ["A_set", "A_get"])
+from bla import proof
 
 # The client, that `db.write(A, true)" to DB
 # and expects "db.read(A) = true"
@@ -26,7 +23,13 @@ def server():
         A_get = A_set
 
 # Proof that assertion holds
-proof([client, server], D)
+proof(
+    [client, server],
+    {
+        "A_set": False,
+        "A_get": False,
+    },
+)
 # Spoiler: it doesn't
 ```
 
