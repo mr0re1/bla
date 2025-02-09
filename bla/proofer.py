@@ -1,9 +1,12 @@
 from typing import Callable
 
 from bla.memory import MemMap, make_mem_map
-from bla.core import Assertion, State, StateView, FailedAssert
+from bla.core import Assertion, State, StateView, FailedAssert, Prog
 from bla.parse import parse_program
 from tabulate import tabulate
+from dataclasses import dataclass
+
+
 
 
 def _run_asserts(
@@ -16,7 +19,19 @@ def _run_asserts(
             return e
     return None
 
+@dataclass
+class _ProofCtx:
+    progs: list[Prog]
+    mm: MemMap
+    assertions: list[Assertion]
+    visited: dict[State, State | None]
 
+
+
+def _run(ctx: _ProofCtx):
+    init_state = State(pos=tuple([0] * len(ctx.progs)), val=ctx.mm.init())
+
+        
 def proof(
     fns: list[Callable],
     domain: dict[str, type],
