@@ -10,21 +10,10 @@ class State:
     val: Memory
 
 
-@dataclass(frozen=True)
-class StateView:
-    state: State
-    progs: list["Prog"]
-
-
 Label = str
 Op = Callable[[Memory], tuple[Label | None, Memory]]
 Expr = Callable[[Memory], Any]
 Predicate = Callable[[Memory], bool]
-
-
-class Assertion(Protocol):
-    def check(self, state: StateView, cyclic: bool) -> None:
-        ...
 
 
 class FailedAssert(Exception):
