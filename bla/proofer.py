@@ -1,6 +1,7 @@
 from bla.memory import MemMap
 from bla.core import State, FailedAssert, Prog
 from dataclasses import dataclass, field
+from collections import deque
 
 
 @dataclass(frozen=True)
@@ -28,10 +29,10 @@ def _run(ctx: ProofCtx, init_state: State):
 
     ctx.parent[init_state] = None
     # NOTES: Assumes that init_state is not in atomic context.
-    stack: list[tuple[State, list[int] | None]] = [(init_state, None)]
+    q: deque[tuple[State, list[int] | None]] = deque([(init_state, None)])
 
-    while stack:
-        state, nxt_progs = stack.pop()
+    while q:
+        state, nxt_progs = q.popleft()
 
         if nxt_progs is None:
             nxt_progs = list(range(len(ctx.progs)))
@@ -58,7 +59,7 @@ def _run(ctx: ProofCtx, init_state: State):
 
             nxt_progs = None if not atomic else [ip]
 
-            stack.append((nxt_state, nxt_progs))
+            q.append((nxt_state, nxt_progs))
             ctx.parent[nxt_state] = state
     return
 

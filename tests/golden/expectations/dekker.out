@@ -1,6 +1,6 @@
 OK
  0 | p0       | wants_to_enter_0 = True          | wants_to_enter_0=False;wants_to_enter_1=False;turn=False;critical_section_used=False
- 2 | p1_brute | wants_to_enter_1 = True          | wants_to_enter_0=True;wants_to_enter_1=False;turn=False;critical_section_used=False
- 4 | p1_brute | critical_section_used = True     | wants_to_enter_0=True;wants_to_enter_1=True;turn=False;critical_section_used=False
- 5 | p0       | assert not critical_section_used | wants_to_enter_0=True;wants_to_enter_1=True;turn=False;critical_section_used=True
+ 3 | p0       | critical_section_used = True     | wants_to_enter_0=True;wants_to_enter_1=False;turn=False;critical_section_used=False
+ 4 | p1_brute | wants_to_enter_1 = True          | wants_to_enter_0=True;wants_to_enter_1=False;turn=False;critical_section_used=True
+ 5 | p1_brute | assert not critical_section_used | wants_to_enter_0=True;wants_to_enter_1=True;turn=False;critical_section_used=True
 FAIL: assert not critical_section_used
