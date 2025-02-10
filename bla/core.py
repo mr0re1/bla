@@ -66,9 +66,5 @@ class Prog:
 
         return nxt_pos, vals, atomic
 
-    def render(self, pos) -> str:
-        res = f"def {self.name}"
-        for i, op in enumerate(self.ops):
-            pref = "  " if i != pos else "->"
-            res += f"\n{pref}{op}"
-        return res
+    def render_op(self, pos) -> str:
+        raise NotImplementedError()

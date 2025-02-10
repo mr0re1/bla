@@ -1,1 +1,1 @@
-from bla.ux import proof, LongStacktrace
+from bla.ux import proof, ShortStacktrace

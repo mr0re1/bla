@@ -1,22 +1,7 @@
 *** Expected failure:
------ step #0:
- def setter_checker_non_atomic(): | def corrupter(): | A=False
- ->  A = True                     | ->  A = False    |
-     assert A                     |                  |
-
-
------ step #1:
- def setter_checker_non_atomic(): | def corrupter(): | A=True
-     A = True                     | ->  A = False    |
- ->  assert A                     |                  |
-
-
------ step #2:
- def setter_checker_non_atomic(): | def corrupter(): | A=False
-     A = True                     |     A = False    |
- ->  assert A                     | ->==HALTED==     |
-
-
-Assertion failed: assert A
+ 0 | setter_checker_non_atomic | A = True  | A=False
+ 1 | corrupter                 | A = False | A=True
+ 2 | setter_checker_non_atomic | assert A  | A=False
+FAIL: assert A
 *** Passes
-No assertions failed
+OK

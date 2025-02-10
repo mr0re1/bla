@@ -212,19 +212,11 @@ class PrettyProg(Prog):
     def __init__(self, ctx: _ParseCtx):
         super().__init__(ctx.prog_name, ctx.stmts)
         self.ctx = ctx
+        self.lines = ctx.src.split("\n")
 
-    def render(self, pos) -> Label:
-        pos = self.ctx.line_mapping[pos] if pos < len(self.ctx.line_mapping) else None
-        lines = self.ctx.src.split("\n")
+    def render_op(self, pos) -> str:
+        ln = self.ctx.line_mapping[pos] if pos < len(self.ctx.line_mapping) else None
+        if ln is None:
+            return "<HALTED>"
 
-        res = ""
-        for i, line in enumerate(lines):
-            if i == pos:
-                res += f"->{line[2:]}\n"
-            else:
-                if i + 1 == len(lines) and not line:
-                    continue  # skip last empty line
-                res += f"{line}\n"
-        if pos == None:
-            res += "->==HALTED=="
-        return res
+        return self.lines[ln]

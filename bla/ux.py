@@ -16,7 +16,7 @@ class ProofRenderer(Protocol):
 def proof(
     fns: list[Callable], domain: dict[str, type], render: ProofRenderer | None = None
 ) -> bool:
-    render = render or LongStacktrace()
+    render = render or ShortStacktrace()
 
     mm = make_mem_map(domain)
     progs = [parse_program(fn, mm) for fn in fns]
@@ -55,42 +55,38 @@ def traceback(ctx: ProofCtx) -> list[TBFrame]:
     return chain
 
 
-class LongStacktrace:
+class ShortStacktrace:
     def __init__(self):
         from tabulate import tabulate  # check dependencies
 
     def render(self, ctx: ProofCtx):
+        if not ctx.failure:
+            print("OK")
+            return
         from tabulate import tabulate
 
-        if not ctx.failure:
-            print("No assertions failed")
-            return
-
-        chain = traceback(ctx)
-
-        for i, frame in enumerate(reversed(chain)):
+        tbl = []
+        chain = traceback(ctx)[::-1]
+        for i, frame in enumerate(chain):
             state = frame.state
-            print(f"----- step #{i}:")
+            prog_idx = frame.prog_idx
+            if prog_idx != -1:
+                prog = ctx.progs[prog_idx]
+                pos = state.pos[prog_idx]
+                prog_name, prog_line = prog.name, prog.render_op(pos)
+            else:
+                prog_name, prog_line = "???", "???"
 
-            pgs = [ctx.progs[pi].render(pos) for pi, pos in enumerate(state.pos)]
-            vls = "\n".join(
+            vls = ";".join(
                 [f"{ref}={val}" for ref, val in ctx.mm.dump(state.val).items()]
             )
-            tbl = [pgs + [vls]]
-            print(tabulate(tbl, tablefmt="presto"))
-            print("\n")
 
-        print(f"Assertion failed: {ctx.failure.error}")
+            next = chain[i + 1].state if i + 1 < len(chain) else None
+            if not next or next.val != state.val:
+                # Only render on changes in memory
+                tbl.append([i, prog_name, prog_line, vls])
 
+            prev = state
 
-# class OneLiner:
-#   def __init__(self):
-#     pass
-
-#   def render(self, ctx: ProofCtx):
-#     if not ctx.failure:
-#       print("OK")
-#       return
-
-
-#     print(f"FAIL: {ctx.failure.error}")
+        print(tabulate(tbl, tablefmt="presto"))
+        print(f"FAIL: {ctx.failure.error}")
