@@ -35,25 +35,7 @@ proof(
 
 ```sh
 $ python examples/inconsistency.py
------ step #0:
- def client():            | def server():         | A_set=False
- ->  A_set = True         | ->  while True:       | A_get=False
-     assert A_get == True |         A_get = A_set |
-
------ step #1:
- def client():            | def server():         | A_set=False
- ->  A_set = True         |     while True:       | A_get=False
-     assert A_get == True | ->      A_get = A_set |
-
------ step #2:
- def client():            | def server():         | A_set=False
- ->  A_set = True         | ->  while True:       | A_get=False
-     assert A_get == True |         A_get = A_set |
-
------ step #3:
- def client():            | def server():         | A_set=True
-     A_set = True         | ->  while True:       | A_get=False
- ->  assert A_get == True |         A_get = A_set |
-
-Assertion failed: assert A_get == True
+ 2 | client | A_set = True         | A_set=False;A_get=False
+ 3 | client | assert A_get == True | A_set=True;A_get=False
+FAIL: assert A_get == True
 ```

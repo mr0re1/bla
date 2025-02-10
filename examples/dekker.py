@@ -69,23 +69,3 @@ def p1_brute():
 
 
 proof([p0, p1_brute], D)
-"""
- def p0():                            | def p1_brute():                      | wants_to_enter_0=True
-     wants_to_enter_0 = True          |     wants_to_enter_1 = True          | wants_to_enter_1=True
-     while wants_to_enter_1:          |                                      | turn=False
-         if turn == True:             |     # critical section               | critical_section_used=True
-             wants_to_enter_0 = False |     assert not critical_section_used |
-             while turn == True:      |     critical_section_used = True     |
-                 pass  # busy wait    | ->  critical_section_used = False    |
-             wants_to_enter_0 = True  |     # releasing critical section     |
-                                      |     turn = False                     |
-     # critical section               |     wants_to_enter_1 = False         |
- ->  assert not critical_section_used |                                      |
-     critical_section_used = True     |                                      |
-     critical_section_used = False    |                                      |
-     # releasing critical section     |                                      |
-     turn = True                      |                                      |
-     wants_to_enter_0 = False         |                                      |
-
-Assertion failed: assert not critical_section_used
-"""

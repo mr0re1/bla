@@ -1,0 +1,96 @@
+  92 | fill_large     | large = 5                   | small=0;large=0
+  94 | large_to_small | large = large - (3 - small) | small=0;large=5
+  95 | large_to_small | small = 3                   | small=0;large=2
+  98 | pour_large     | large = 0                   | small=3;large=2
+ 100 | small_to_large | large = small + large       | small=3;large=0
+ 101 | small_to_large | small = 0                   | small=3;large=3
+ 104 | large_to_small | small = small + large       | small=0;large=3
+ 105 | large_to_small | large = 0                   | small=3;large=3
+ 118 | small_to_large | large = small + large       | small=3;large=0
+ 119 | small_to_large | small = 0                   | small=3;large=3
+ 126 | large_to_small | small = small + large       | small=0;large=3
+ 127 | large_to_small | large = 0                   | small=3;large=3
+ 130 | small_to_large | large = small + large       | small=3;large=0
+ 131 | small_to_large | small = 0                   | small=3;large=3
+ 136 | pour_large     | large = 0                   | small=0;large=3
+ 259 | fill_large     | large = 5                   | small=0;large=0
+ 263 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 264 | large_to_small | small = 3                   | small=0;large=2
+ 280 | small_to_large | large = small + large       | small=3;large=2
+ 281 | small_to_large | small = 0                   | small=3;large=5
+ 286 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 287 | large_to_small | small = 3                   | small=0;large=2
+ 291 | pour_large     | large = 0                   | small=3;large=2
+ 305 | small_to_large | large = small + large       | small=3;large=0
+ 306 | small_to_large | small = 0                   | small=3;large=3
+ 311 | large_to_small | small = small + large       | small=0;large=3
+ 312 | large_to_small | large = 0                   | small=3;large=3
+ 327 | small_to_large | large = small + large       | small=3;large=0
+ 328 | small_to_large | small = 0                   | small=3;large=3
+ 331 | large_to_small | small = small + large       | small=0;large=3
+ 332 | large_to_small | large = 0                   | small=3;large=3
+ 335 | pour_small     | small = 0                   | small=3;large=0
+ 347 | fill_small     | small = 3                   | small=0;large=0
+ 354 | small_to_large | large = small + large       | small=3;large=0
+ 355 | small_to_large | small = 0                   | small=3;large=3
+ 361 | pour_large     | large = 0                   | small=0;large=3
+ 477 | fill_large     | large = 5                   | small=0;large=0
+ 486 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 487 | large_to_small | small = 3                   | small=0;large=2
+ 496 | small_to_large | large = small + large       | small=3;large=2
+ 497 | small_to_large | small = 0                   | small=3;large=5
+ 504 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 505 | large_to_small | small = 3                   | small=0;large=2
+ 511 | small_to_large | large = small + large       | small=3;large=2
+ 512 | small_to_large | small = 0                   | small=3;large=5
+ 515 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 516 | large_to_small | small = 3                   | small=0;large=2
+ 519 | pour_large     | large = 0                   | small=3;large=2
+ 534 | small_to_large | large = small + large       | small=3;large=0
+ 535 | small_to_large | small = 0                   | small=3;large=3
+ 542 | pour_large     | large = 0                   | small=0;large=3
+ 552 | fill_large     | large = 5                   | small=0;large=0
+ 558 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 559 | large_to_small | small = 3                   | small=0;large=2
+ 570 | small_to_large | large = small + large       | small=3;large=2
+ 571 | small_to_large | small = 0                   | small=3;large=5
+ 578 | large_to_small | large = large - (3 - small) | small=0;large=5
+ 579 | large_to_small | small = 3                   | small=0;large=2
+ 582 | pour_small     | small = 0                   | small=3;large=2
+ 584 | large_to_small | small = small + large       | small=0;large=2
+ 585 | large_to_small | large = 0                   | small=2;large=2
+ 591 | small_to_large | large = small + large       | small=2;large=0
+ 592 | small_to_large | small = 0                   | small=2;large=2
+ 595 | large_to_small | small = small + large       | small=0;large=2
+ 596 | large_to_small | large = 0                   | small=2;large=2
+ 615 | small_to_large | large = small + large       | small=2;large=0
+ 616 | small_to_large | small = 0                   | small=2;large=2
+ 625 | large_to_small | small = small + large       | small=0;large=2
+ 626 | large_to_small | large = 0                   | small=2;large=2
+ 630 | small_to_large | large = small + large       | small=2;large=0
+ 631 | small_to_large | small = 0                   | small=2;large=2
+ 640 | large_to_small | small = small + large       | small=0;large=2
+ 641 | large_to_small | large = 0                   | small=2;large=2
+ 645 | small_to_large | large = small + large       | small=2;large=0
+ 646 | small_to_large | small = 0                   | small=2;large=2
+ 652 | large_to_small | small = small + large       | small=0;large=2
+ 653 | large_to_small | large = 0                   | small=2;large=2
+ 659 | small_to_large | large = small + large       | small=2;large=0
+ 660 | small_to_large | small = 0                   | small=2;large=2
+ 663 | large_to_small | small = small + large       | small=0;large=2
+ 664 | large_to_small | large = 0                   | small=2;large=2
+ 683 | small_to_large | large = small + large       | small=2;large=0
+ 684 | small_to_large | small = 0                   | small=2;large=2
+ 693 | large_to_small | small = small + large       | small=0;large=2
+ 694 | large_to_small | large = 0                   | small=2;large=2
+ 698 | small_to_large | large = small + large       | small=2;large=0
+ 699 | small_to_large | small = 0                   | small=2;large=2
+ 704 | large_to_small | small = small + large       | small=0;large=2
+ 705 | large_to_small | large = 0                   | small=2;large=2
+ 718 | small_to_large | large = small + large       | small=2;large=0
+ 719 | small_to_large | small = 0                   | small=2;large=2
+ 724 | large_to_small | small = small + large       | small=0;large=2
+ 725 | large_to_small | large = 0                   | small=2;large=2
+ 730 | fill_large     | large = 5                   | small=2;large=0
+ 732 | large_to_small | large = large - (3 - small) | small=2;large=5
+FAIL: Invalid value 4
