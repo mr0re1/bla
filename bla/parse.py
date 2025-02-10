@@ -27,6 +27,7 @@ class _ParseCtx:
 
     _break_lbls: list[Label] = field(default_factory=list)
     _continue_lbls: list[Label] = field(default_factory=list)
+    _end_lbl: Label = "__lbl_END"
 
     def ref(self, var: str) -> Reference:
         ref = Reference(var)
@@ -40,15 +41,13 @@ class _ParseCtx:
         self._nxt_label += 1
         return f"__lbl_{self._nxt_label}"
 
-    def add_stmt(self, stmt: Op | Label | Sentinel, node: ast.stmt) -> None:
-        match stmt:
-            case Label() | Sentinel():
-                self.stmts.append(stmt)  # Go to program but not getting line mapping
-                # TODO: don't leak this detail of Prog impplelemtation
-            case _ as op:
-                assert callable(op)
-                self.stmts.append(op)
-                self.line_mapping.append(self.lineno(node))
+    def add_sentinel(self, sent: Sentinel | Label) -> None:
+        self.stmts.append(sent)
+
+    def add_op(self, op: Op, node: ast.stmt) -> None:
+        assert callable(op)
+        self.stmts.append(op)
+        self.line_mapping.append(self.lineno(node))
 
     def syntax_err(self, msg: str, node: ast.stmt) -> BlaSyntaxError:
         lines = self.src.split("\n")
@@ -91,7 +90,7 @@ def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     # TODO: use shorthand for `A = const` and `A = B`
     #  to avoid costly(?) expressions eval
     expr = ops.EvalExpr.from_ast(t.value, ctx.mm)
-    ctx.add_stmt(ops.mov(ctx.mm, ref, expr), t)
+    ctx.add_op(ops.mov(ctx.mm, ref, expr), t)
 
 
 def _parse_if(t: ast.If, ctx: _ParseCtx):
@@ -103,20 +102,20 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
     pred = _parse_predicate(t.test, ctx)
     if_op = ops.cond(pred, else_lbl, negate=True)
 
-    ctx.add_stmt(if_op, t)
+    ctx.add_op(if_op, t)
     _parse_body(t.body, ctx)
 
     if t.orelse:  # if: ... else: ...
         end_lbl = ctx.uniq_label()
-        ctx.add_stmt(ops.goto(end_lbl), t.body[-1])
+        ctx.add_op(ops.goto(end_lbl), t.body[-1])
 
-        ctx.add_stmt(else_lbl, t.orelse[0])
+        ctx.add_sentinel(else_lbl)
         _parse_body(t.orelse, ctx)
 
     else:  # if: ...
         end_lbl = else_lbl
 
-    ctx.add_stmt(end_lbl, t)
+    ctx.add_sentinel(end_lbl)
 
 
 def _parse_while(t: ast.While, ctx: _ParseCtx):
@@ -128,15 +127,15 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
     begin_lbl = ctx.uniq_label()
     end_lbl = ctx.uniq_label()
 
-    ctx.add_stmt(begin_lbl, t)
-    ctx.add_stmt(ops.cond(pred, end_lbl, negate=True), t)
+    ctx.add_sentinel(begin_lbl)
+    ctx.add_op(ops.cond(pred, end_lbl, negate=True), t)
 
     ctx._continue_lbls.append(begin_lbl)
     ctx._break_lbls.append(end_lbl)
 
     _parse_body(t.body, ctx)
-    ctx.add_stmt(ops.goto(begin_lbl), t)
-    ctx.add_stmt(end_lbl, t)
+    ctx.add_op(ops.goto(begin_lbl), t)
+    ctx.add_sentinel(end_lbl)
 
     ctx._break_lbls.pop()
     ctx._continue_lbls.pop()
@@ -164,28 +163,34 @@ def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
         # TODO: use better anchor than body[0]
 
     ctx._atomic_context = True
-    ctx.add_stmt(Sentinel.ATOMIC_ENTER, body[0])
+    ctx.add_sentinel(Sentinel.ATOMIC_ENTER)
     _parse_body(body, ctx)
-    ctx.add_stmt(Sentinel.ATOMIC_EXIT, body[0])
+    ctx.add_sentinel(Sentinel.ATOMIC_EXIT)
     ctx._atomic_context = False
 
 
 def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
     msg = ast.unparse(t)
     pred = _parse_predicate(t.test, ctx)
-    ctx.add_stmt(ops.assert_op(pred, msg=msg), t)
+    ctx.add_op(ops.assert_op(pred, msg=msg), t)
 
 
 def _parse_break(t: ast.Break, ctx: _ParseCtx):
     if not ctx._break_lbls:
         raise ctx.syntax_err("'break' outside loop", t)
-    ctx.add_stmt(ops.goto(ctx._break_lbls[-1]), t)
+    ctx.add_op(ops.goto(ctx._break_lbls[-1]), t)
 
 
 def _parse_continue(t: ast.Continue, ctx: _ParseCtx):
     if not ctx._continue_lbls:
         raise ctx.syntax_err("'continue' outside loop", t)
-    ctx.add_stmt(ops.goto(ctx._continue_lbls[-1]), t)
+    ctx.add_op(ops.goto(ctx._continue_lbls[-1]), t)
+
+
+def _parse_return(t: ast.Return, ctx: _ParseCtx):
+    if t.value:
+        raise ctx.syntax_err("'return' can not be used with value", t)
+    ctx.add_op(ops.goto(ctx._end_lbl), t)
 
 
 def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
@@ -206,6 +211,8 @@ def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
             _parse_break(t, ctx)
         case ast.Continue():
             _parse_continue(t, ctx)
+        case ast.Return():
+            _parse_return(t, ctx)
 
         case _:
             raise ctx.syntax_err("Unknown op", t)
@@ -234,6 +241,7 @@ def parse_program(f: Callable, mm: MemMap) -> Prog:
                 line_offset=t.body[0].lineno,
             )
             _parse_body(body, ctx)
+            ctx.add_sentinel(ctx._end_lbl)
 
         case _:
             raise Exception("Expected a single function, got", t.body)
