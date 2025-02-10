@@ -7,6 +7,11 @@ from bla.memory import MemMap, Reference, Memory
 from bla.core import Prog, Op, Label, Predicate, Sentinel
 
 
+class BlaSyntaxError(SyntaxError):
+    def __init__(self, msg: str, filename: str, lineno: int, offset: int, text: str):
+        super().__init__(msg, (filename, lineno, offset, text))
+
+
 @dataclass
 class _ParseCtx:
     prog_name: str
@@ -45,6 +50,20 @@ class _ParseCtx:
                 self.stmts.append(op)
                 self.line_mapping.append(self.lineno(node))
 
+    def syntax_err(self, msg: str, node: ast.stmt) -> BlaSyntaxError:
+        lines = self.src.split("\n")
+        lineno = self.lineno(node)
+        text = lines[lineno] if 0 <= lineno < len(lines) else ast.unparse(node)
+
+        return BlaSyntaxError(
+            msg,
+            # TODO: point at rela file & lineno
+            filename=f"program:${self.prog_name}",
+            lineno=lineno,
+            offset=node.col_offset,
+            text=text,
+        )
+
 
 def _parse_predicate(t: ast.expr, ctx: _ParseCtx) -> Predicate:
     # TODO: use shorthand for `const` and `A`
@@ -60,9 +79,13 @@ def _parse_predicate(t: ast.expr, ctx: _ParseCtx) -> Predicate:
 
 
 def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
-    assert len(t.targets) == 1, "Tuple assignment is not supported"
+    if len(t.targets) != 1:
+        raise ctx.syntax_err("Tuple assignment is not supported", t)
+
     tgt = t.targets[0]
-    assert isinstance(tgt, ast.Name), "Only assignment by name is supported"
+    # TODO: support atomic tuple-assignemt
+    if not isinstance(tgt, ast.Name):
+        raise ctx.syntax_err("Only assignment by name is supported", t)
 
     ref = ctx.ref(tgt.id)
     # TODO: use shorthand for `A = const` and `A = B`
@@ -97,7 +120,8 @@ def _parse_if(t: ast.If, ctx: _ParseCtx):
 
 
 def _parse_while(t: ast.While, ctx: _ParseCtx):
-    assert not t.orelse, "else-clause in while-loop is not supported"
+    if t.orelse:
+        raise ctx.syntax_err("else-clause in while-loop is not supported", t.orelse[0])
 
     pred = _parse_predicate(t.test, ctx)
 
@@ -119,19 +143,25 @@ def _parse_while(t: ast.While, ctx: _ParseCtx):
 
 
 def _parse_with(t: ast.With, ctx: _ParseCtx):
-    assert t.type_comment is None, "Type comments are not supported"
-    assert len(t.items) == 1, "Only one item is supported"
+    if len(t.items) != 1:
+        raise ctx.syntax_err("Only one item is supported", t)
+
     it = t.items[0]
-    assert it.optional_vars is None, "Optional vars are not supported"
+
+    if it.optional_vars:
+        raise ctx.syntax_err("Optional vars are not supported", t)
+
     match it.context_expr:
         case ast.Name("atomic"):
             _parse_atomic_context(t.body, ctx)
         case _:
-            raise Exception("Unsupported context, only 'atomic' is supported")
+            raise ctx.syntax_err("Unsupported context, only 'atomic' is supported", t)
 
 
 def _parse_atomic_context(body: list[ast.stmt], ctx: _ParseCtx):
-    assert not ctx._atomic_context, "Nested atomic context is not supported"
+    if ctx._atomic_context:
+        raise ctx.syntax_err("Nested atomic context is not supported", body[0])
+        # TODO: use better anchor than body[0]
 
     ctx._atomic_context = True
     ctx.add_stmt(Sentinel.ATOMIC_ENTER, body[0])
@@ -147,12 +177,14 @@ def _parse_assert(t: ast.Assert, ctx: _ParseCtx):
 
 
 def _parse_break(t: ast.Break, ctx: _ParseCtx):
-    assert ctx._break_lbls, "brake outside of a loop"
+    if not ctx._break_lbls:
+        raise ctx.syntax_err("'break' outside loop", t)
     ctx.add_stmt(ops.goto(ctx._break_lbls[-1]), t)
 
 
 def _parse_continue(t: ast.Continue, ctx: _ParseCtx):
-    assert ctx._continue_lbls, "continue outside of a loop"
+    if not ctx._continue_lbls:
+        raise ctx.syntax_err("'continue' outside loop", t)
     ctx.add_stmt(ops.goto(ctx._continue_lbls[-1]), t)
 
 
@@ -176,7 +208,7 @@ def _parse_stmt(t: ast.stmt, ctx: _ParseCtx):
             _parse_continue(t, ctx)
 
         case _:
-            raise Exception("Unknown op", ast.unparse(t))
+            raise ctx.syntax_err("Unknown op", t)
 
 
 def _parse_body(body: list[ast.stmt], ctx: _ParseCtx):
