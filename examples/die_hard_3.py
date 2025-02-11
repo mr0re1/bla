@@ -36,14 +36,14 @@ def empty_large():
 def small_to_large():
     while True:
         small, large = (
-            (0, small + large) if small + large <= 5 else (small - (5 - large), 5)
+            (0, small + large) if small + large <= 5 else (small + large - 5, 5)
         )
 
 
 def large_to_small():
     while True:
         small, large = (
-            (small + large, 0) if small + large <= 3 else (3, large - (3 - small))
+            (small + large, 0) if small + large <= 3 else (3, small + large - 3)
         )
 
 
