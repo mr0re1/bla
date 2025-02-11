@@ -12,16 +12,35 @@ def _assign_mem(mem: Memory, addr: int, value: Any) -> Memory:
     return tuple(nv)
 
 
-def mov(mm: MemMap, var: Reference, expr: Expr) -> Op:
-    daddr = mm.addr(var)
+def mov(mm: MemMap, tgts: Reference | tuple[Reference, ...], expr: Expr) -> Op:
+    match tgts:
+        case Reference() as ref:
+            tpl, refs = False, [ref]
+        case tuple():
+            tpl, refs = True, list(tgts)
+        case _:
+            assert False, f"unexpected targets: {tgts}"
+
+    addrs = [mm.addr(ref) for ref in refs]
 
     def impl(mem: Memory):
-        val = expr(mem)
+        res = expr(mem)
+        if tpl:
+            res = list(res)
+            assert len(res) == len(
+                refs
+            ), f"unexpected ({len(res)}) many values to unpack (expected {len(refs)})"
+        else:
+            res = [res]
+
+        nm = list(mem)
         try:
-            mm.validate(var, val)
+            for addr, var, val in zip(addrs, refs, res):
+                mm.validate(var, val)
+                nm[addr] = val
         except AssertionError as e:  # TODO: don't rethrow, make MM to throw correct type
             raise FailedAssert(str(e))
-        return None, _assign_mem(mem, daddr, expr(mem))
+        return None, tuple(nm)
 
     return impl
 

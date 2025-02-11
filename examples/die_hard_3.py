@@ -23,12 +23,12 @@ def fill_large():
         large = 5
 
 
-def pour_small():
+def empty_small():
     while True:
         small = 0
 
 
-def pour_large():
+def empty_large():
     while True:
         large = 0
 
@@ -37,25 +37,21 @@ def small_to_large():
     while True:
         with atomic:
             if small + large <= 5:
-                large = small + large
-                small = 0
+                small, large = 0, small + large
             else:
-                small = small - (5 - large)
-                large = 5
+                small, large = small - (5 - large), 5
 
 
 def large_to_small():
     while True:
         with atomic:
             if small + large <= 3:
-                small = small + large
-                large = 0
+                small, large = small + large, 0
             else:
-                large = large - (3 - small)
-                small = 3
+                small, large = 3, large - (3 - small)
 
 
 proof(
-    [fill_small, fill_large, pour_small, pour_large, small_to_large, large_to_small],
+    [fill_small, fill_large, empty_small, empty_large, small_to_large, large_to_small],
     domain,
 )

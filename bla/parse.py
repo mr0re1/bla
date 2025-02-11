@@ -79,18 +79,30 @@ def _parse_predicate(t: ast.expr, ctx: _ParseCtx) -> Predicate:
 
 def _parse_assign(t: ast.Assign, ctx: _ParseCtx):
     if len(t.targets) != 1:
-        raise ctx.syntax_err("Tuple assignment is not supported", t)
+        raise ctx.syntax_err("Assignments in form 'a=b=c' are not supported", t)
 
-    tgt = t.targets[0]
-    # TODO: support atomic tuple-assignemt
-    if not isinstance(tgt, ast.Name):
-        raise ctx.syntax_err("Only assignment by name is supported", t)
-
-    ref = ctx.ref(tgt.id)
     # TODO: use shorthand for `A = const` and `A = B`
     #  to avoid costly(?) expressions eval
     expr = ops.EvalExpr.from_ast(t.value, ctx.mm)
-    ctx.add_op(ops.mov(ctx.mm, ref, expr), t)
+    err = ctx.syntax_err('Only "flat" assignments are supported', t)
+
+    tgts: Reference | tuple[Reference, ...] | None = None
+    match t.targets[0]:
+        case ast.Name(name):
+            tgts = ctx.ref(name)
+        case ast.Tuple():
+            refs = []
+            for el in t.targets[0].elts:
+                match el:
+                    case ast.Name(name):
+                        refs.append(ctx.ref(name))
+                    case _:
+                        raise err
+            if refs:
+                tgts = tuple(refs)
+    if not tgts:
+        raise err
+    ctx.add_op(ops.mov(ctx.mm, tgts, expr), t)
 
 
 def _parse_if(t: ast.If, ctx: _ParseCtx):
