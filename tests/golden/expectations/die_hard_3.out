@@ -1,7 +1,7 @@
-  1 | fill_large     | large = 5                             | small=0;large=0
-  7 | large_to_small | small, large = 3, large - (3 - small) | small=0;large=5
-  8 | empty_small    | small = 0                             | small=3;large=2
- 12 | large_to_small | small, large = small + large, 0       | small=0;large=2
- 14 | fill_large     | large = 5                             | small=2;large=0
- 18 | large_to_small | small, large = 3, large - (3 - small) | small=2;large=5
+  1 | fill_large     | large = 5        | small=0;large=0
+  6 | large_to_small | small, large = ( | small=0;large=5
+  7 | empty_small    | small = 0        | small=3;large=2
+ 10 | large_to_small | small, large = ( | small=0;large=2
+ 11 | fill_large     | large = 5        | small=2;large=0
+ 14 | large_to_small | small, large = ( | small=2;large=5
 FAIL: Invalid value 4

@@ -35,20 +35,16 @@ def empty_large():
 
 def small_to_large():
     while True:
-        with atomic:
-            if small + large <= 5:
-                small, large = 0, small + large
-            else:
-                small, large = small - (5 - large), 5
+        small, large = (
+            (0, small + large) if small + large <= 5 else (small - (5 - large), 5)
+        )
 
 
 def large_to_small():
     while True:
-        with atomic:
-            if small + large <= 3:
-                small, large = small + large, 0
-            else:
-                small, large = 3, large - (3 - small)
+        small, large = (
+            (small + large, 0) if small + large <= 3 else (3, large - (3 - small))
+        )
 
 
 proof(
